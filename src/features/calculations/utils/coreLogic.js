@@ -888,10 +888,64 @@ export const saveWorkingSessionToDraft = async (projectType, draftId, defaultTit
           projectIdentity: data.projectIdentity,
         };
 
-        await saveCalculationDraft(reqId, draftId, backendPayload);
-        console.info(
-          `[saveWorkingSessionToDraft] Synced complete calculation draft to backend for ${draftId}`
-        );
+        let draftSavedOnServer = false;
+        try {
+          await saveCalculationDraft(reqId, draftId, backendPayload);
+          draftSavedOnServer = true;
+          console.info(
+            `[saveWorkingSessionToDraft] Synced complete calculation draft to backend for ${draftId}`
+          );
+        } catch (strictErr) {
+          // If backend rejects extra keys (e.g. Unknown calculation draft keys), fallback to standard CalculationInput payload
+          if (calcPayload?.poleStandardHeightId) {
+            try {
+              const cleanBackendPayload = {
+                poleStandardHeightId: calcPayload.poleStandardHeightId,
+                directObjects: calcPayload.directObjects || [],
+                overheadWires: calcPayload.overheadWires || [],
+                arms: calcPayload.arms || [],
+                groundPosition: calcPayload.groundPosition || "on_gl",
+                embedmentLengthMm: calcPayload.embedmentLengthMm ?? null,
+              };
+              await saveCalculationDraft(reqId, draftId, cleanBackendPayload);
+              draftSavedOnServer = true;
+              console.info(
+                `[saveWorkingSessionToDraft] Synced standard calculation draft to backend for ${draftId}`
+              );
+            } catch (fallbackErr) {
+              console.warn(
+                "[saveWorkingSessionToDraft] Standard calculation draft save failed:",
+                fallbackErr?.response?.data || fallbackErr?.message
+              );
+            }
+          }
+        }
+
+        // Persist cover header to server if cover data is present
+        if (data.cover) {
+          try {
+            const parsedCover =
+              typeof data.cover === "string" ? JSON.parse(data.cover) : data.cover;
+            if (
+              parsedCover &&
+              (parsedCover.reportNumber ||
+                parsedCover.calculationNumber ||
+                parsedCover.title1 ||
+                parsedCover.projectName)
+            ) {
+              const { saveReportHeader, buildReportHeaderPayload } = await import(
+                "../services/requestService"
+              );
+              const headerPayload = buildReportHeaderPayload(parsedCover);
+              await saveReportHeader(reqId, draftId, headerPayload);
+            }
+          } catch (covErr) {
+            console.debug(
+              "[saveWorkingSessionToDraft] saveReportHeader sync error:",
+              covErr?.message
+            );
+          }
+        }
       } else {
         console.warn(
           "[saveWorkingSessionToDraft] Could not resolve request ID for draft:",

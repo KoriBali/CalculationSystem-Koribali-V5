@@ -408,6 +408,19 @@ const normalizeServerCase = (
       c.checkedBy ||
       null,
     status: mapItemStatusToCaseStatus(c.status || c.state, index),
+    hasReport: Boolean(
+      c.hasReport ||
+      c.has_report ||
+      c.reportSnapshot ||
+      c.report_snapshot ||
+      (Array.isArray(c.runs) && c.runs.length > 0) ||
+      c.runCount > 0 ||
+      c.run_count > 0 ||
+      c.latestRunId ||
+      c.latest_run_id
+    ),
+    draftData: c.draftData || c.draft_data || c.payload || null,
+    reportSnapshot: c.reportSnapshot || c.report_snapshot || null,
     createdAt: c.createdAt || c.created_at || new Date().toISOString(),
     lastEdited: c.updatedAt || c.updated_at || null,
   };
