@@ -3,7 +3,7 @@
 // only way into a draft: it opens on Project Setup, and leaving goes back to
 // the case's request.
 import { findRequestOfCase, updateRequest } from "../data/requestStore";
-import { getDraftsIndex } from "./coreLogic";
+import { getDraftsIndex, resolveRequestIdForCase } from "./coreLogic";
 
 export const DEFAULT_IDENTITY = {
   requestNo: "",
@@ -190,29 +190,88 @@ export const activeDraftRequestPath = (projectType) =>
 export const submitCaseForCheck = async (draftId, user) => {
   if (!draftId) return;
   const found = findRequestOfCase(draftId);
-  if (!found) return;
-  const { request, case: caseItem } = found;
-  updateRequest(request.id, (r) => ({
-    ...r,
-    cases: (r.cases || []).map((c) =>
-      c.id === draftId
-        ? {
-            ...c,
-            status: "Ready for check",
-            lastEdited: new Date().toISOString(),
-            lastEditedBy:
-              user?.fullName || user?.name || "Drafter",
+  let requestId = found?.request?.id;
+
+  if (!requestId) {
+    requestId =
+      sessionStorage.getItem(`case_request_id_${draftId}`) ||
+      sessionStorage.getItem("active_request_id");
+  }
+
+  if (!requestId) {
+    try {
+      requestId = await resolveRequestIdForCase(draftId);
+    } catch {}
+  }
+
+  const caseItem = found?.case;
+  const workType =
+    caseItem?.workType === "drawing" ? "drawing" : "calculation";
+
+  if (requestId) {
+    updateRequest(requestId, (r) => {
+      const existingCases = r.cases || [];
+      const updatedCases = existingCases.map((c) =>
+        c.id === draftId
+          ? {
+              ...c,
+              status: "Ready for check",
+              lastEdited: new Date().toISOString(),
+              lastEditedBy:
+                user?.fullName || user?.name || "Drafter",
+            }
+          : c
+      );
+      const hasCase = updatedCases.some((c) => c.id === draftId);
+      if (!hasCase && draftId) {
+        updatedCases.push({
+          id: draftId,
+          no: sessionStorage.getItem(`case_no_${draftId}`) || "001",
+          status: "Ready for check",
+          workType,
+          lastEdited: new Date().toISOString(),
+          lastEditedBy: user?.fullName || user?.name || "Drafter",
+        });
+      }
+      return {
+        ...r,
+        status: "ready_check",
+        cases: updatedCases,
+      };
+    });
+  }
+
+  // Also update cached lists in sessionStorage for instant UI synchronization on My Projects / Database
+  try {
+    ["cached_server_requests", "cached_project_database_requests"].forEach(
+      (key) => {
+        const cached = sessionStorage.getItem(key);
+        if (cached) {
+          const list = JSON.parse(cached);
+          if (Array.isArray(list)) {
+            const updated = list.map((req) => {
+              if (req.id === requestId) {
+                const cases = (req.cases || []).map((c) =>
+                  c.id === draftId ? { ...c, status: "Ready for check" } : c
+                );
+                return { ...req, status: "ready_check", cases };
+              }
+              return req;
+            });
+            sessionStorage.setItem(key, JSON.stringify(updated));
           }
-        : c
-    ),
-  }));
+        }
+      }
+    );
+  } catch {}
 
   // Asynchronously notify backend API Gateway if request exists on server
-  try {
-    const workType = caseItem?.workType === "drawing" ? "drawing" : "calculation";
-    await markCaseReadyForCheck(request.id, workType, draftId);
-  } catch (err) {
-    console.debug("[submitCaseForCheck] Gateway sync skipped:", err?.message);
+  if (requestId) {
+    try {
+      await markCaseReadyForCheck(requestId, workType, draftId);
+    } catch (err) {
+      console.debug("[submitCaseForCheck] Gateway sync error:", err?.message);
+    }
   }
 };
 

@@ -539,7 +539,7 @@ export function CoverFormModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 md:gap-y-8">
             {/* Report Number */}
-            <div className="relative md:col-span-2">
+            <div className="relative md:col-span-1">
               <Label>
                 Report Number <span className="text-red-500 ml-1 font-semibold">*</span>
               </Label>
@@ -553,6 +553,23 @@ export function CoverFormModal({
               <ErrorStyle
                 show={coverErrors.reportNumber}
                 text={coverErrors.reportNumber}
+              />
+            </div>
+
+            {/* Report Date */}
+            <div className="relative md:col-span-1">
+              <Label>
+                Report Date (日付) <span className="text-red-500 ml-1 font-semibold">*</span>
+              </Label>
+              <input
+                type="date"
+                value={coverData.date || ""}
+                onChange={(e) => updateCover({ date: e.target.value })}
+                className={inputStyle(coverErrors.date)}
+              />
+              <ErrorStyle
+                show={coverErrors.date}
+                text={coverErrors.date}
               />
             </div>
 

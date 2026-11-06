@@ -704,14 +704,14 @@ export function ReportView() {
     navigate("/projects");
   };
 
-  const handleConfirmSaveDb = () => {
+  const handleConfirmSaveDb = async () => {
+    setShowDbModal(false);
     if (draftId) {
       saveWorkingSessionToDraft(projectType, draftId);
-      submitCaseForCheck(draftId, getUser());
+      await submitCaseForCheck(draftId, getUser());
     }
-    setShowDbModal(false);
     setToast({
-      message: "Case saved and submitted for checking!",
+      message: "Case saved and status updated to Ready for Check!",
       type: "success",
     });
     // Redirect to My Projects list page (/projects)

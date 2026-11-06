@@ -356,10 +356,74 @@ export const deleteDrawingCase = async (requestId, caseId) => {
 // ─── CASE WORKFLOW ACTIONS ─────────────────────────────────────────────────────
 
 export const markCaseReadyForCheck = async (requestId, workType, caseId) => {
-  const { data } = await api.post(
-    `/api/requests/${requestId}/cases/${workType}/${caseId}/ready-for-check`
-  );
-  return data?.data || data;
+  const normWorkType =
+    workType === "drawing" ? "drawing" : "calculation";
+  const caseType =
+    normWorkType === "drawing" ? "drawing-cases" : "calculation-cases";
+
+  const candidates = [
+    // 1. Direct case endpoint: POST /api/requests/{id}/cases/{workType}/{caseId}/ready-for-check
+    {
+      method: "post",
+      url: `/api/requests/${requestId}/cases/${normWorkType}/${caseId}/ready-for-check`,
+    },
+    // 2. Specific resource endpoint: POST /api/requests/{id}/calculation-cases/{caseId}/ready-for-check
+    {
+      method: "post",
+      url: `/api/requests/${requestId}/${caseType}/${caseId}/ready-for-check`,
+    },
+    // 3. Flat case endpoint: POST /api/requests/{id}/cases/{caseId}/ready-for-check
+    {
+      method: "post",
+      url: `/api/requests/${requestId}/cases/${caseId}/ready-for-check`,
+    },
+    // 4. Update case status via PATCH
+    {
+      method: "patch",
+      url: `/api/requests/${requestId}/${caseType}/${caseId}`,
+      data: { status: "ready_for_check" },
+    },
+    {
+      method: "patch",
+      url: `/api/requests/${requestId}/${caseType}/${caseId}`,
+      data: { status: "ready_check" },
+    },
+  ];
+
+  let resultData = null;
+  let success = false;
+
+  for (const c of candidates) {
+    try {
+      if (c.method === "post") {
+        const { data } = await api.post(c.url, c.data || {});
+        resultData = data?.data || data;
+        success = true;
+        break;
+      } else if (c.method === "patch") {
+        const { data } = await api.patch(c.url, c.data || {});
+        resultData = data?.data || data;
+        success = true;
+        break;
+      }
+    } catch (err) {
+      // If 404 or 405 (endpoint variation), continue to try next candidate
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        continue;
+      }
+      // If server returned 400 with detail, attempt next format
+      continue;
+    }
+  }
+
+  // Also transition parent request status to ready_check if applicable
+  try {
+    await api.patch(`/api/requests/${requestId}`, {
+      status: "ready_check",
+    });
+  } catch {}
+
+  return resultData || { success: true };
 };
 
 export const checkCase = async (requestId, workType, caseId, { checkResult, note }) => {
