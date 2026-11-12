@@ -2,20 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
-  ArrowLeft,
-  RotateCcw,
+  ChevronLeft,
   ChevronRight,
+  RotateCcw,
+  CheckCircle,
+  Circle,
   Calculator,
   PenTool,
-  Boxes,
+  Layers,
   Sliders,
-  Settings,
 } from "lucide-react";
 import { projectTypeLabel } from "../constants/projectTypes";
 import { ConfirmResetAllModal } from "../components/modals/ConfirmResetAllModal";
 import { ToastModal } from "../components/modals/ToastModal";
 
-// Reusable section title with left accent bar (matching ConditionForm)
+// Reusable section title with left accent bar
 const SectionTitle = ({ children }) => (
   <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium">
     <div className="w-1 h-4 md:h-5 bg-[#3399cc] rounded-full" />
@@ -23,56 +24,64 @@ const SectionTitle = ({ children }) => (
   </h3>
 );
 
-// Reusable section card wrapper (matching ConditionForm)
+// Reusable section card wrapper
 const SectionCard = ({ children }) => (
   <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200">
     {children}
   </div>
 );
 
-// Selectable option card matching ConditionForm ToggleCard style & wireframe radio indicator
-function SelectOptionCard({ label, icon, selected, onSelect }) {
+// CardOption matching the user's reference code
+const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
+  const isActive = current === value;
   return (
-    <div
-      onClick={onSelect}
-      className={`relative overflow-hidden rounded-lg border px-3 xl:px-4 py-2.5 lg:py-3 transition-all duration-300 cursor-pointer ${
-        selected
-          ? "border-blue-500 bg-white shadow-sm ring-1 ring-blue-50"
-          : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"
-      }`}
+    <button
+      type="button"
+      onClick={() => onChange(value)}
+      className={`group w-full flex items-center justify-between px-3 xl:px-4 py-2.5 lg:py-3 relative overflow-hidden rounded-lg border transition-all duration-300 cursor-pointer active:scale-[0.98] text-left
+        ${
+          isActive
+            ? "border-blue-500 bg-blue-50 shadow-sm ring-1 ring-blue-50"
+            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+        }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Icon */}
-          <div
-            className={`p-1.5 rounded-md transition-colors ${
-              selected ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {icon}
-          </div>
-          {/* Label */}
+      <div className="flex items-center gap-3">
+        <div
+          className={`p-1.5 rounded-md transition-colors ${
+            isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          <Icon className="w-4 h-4 md:w-4.5 md:h-4.5" />
+        </div>
+        <div className="flex flex-col items-start">
           <p
             className={`text-[12px] md:text-sm font-medium ${
-              selected ? "text-slate-900 font-semibold" : "text-slate-500"
+              isActive ? "text-slate-900 font-semibold" : "text-slate-700"
             }`}
           >
             {label}
           </p>
-        </div>
-
-        {/* Circular radio indicator */}
-        <div
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
-            selected ? "border-blue-600 bg-white" : "border-slate-300 bg-white"
-          }`}
-        >
-          {selected && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+          {desc && (
+            <p
+              className={`text-[11px] md:text-xs mt-0.5 ${
+                isActive ? "text-slate-500" : "text-slate-400"
+              }`}
+            >
+              {desc}
+            </p>
+          )}
         </div>
       </div>
-    </div>
+      <div className="shrink-0 ml-2 flex items-center">
+        {isActive ? (
+          <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+        ) : (
+          <Circle className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-slate-400" />
+        )}
+      </div>
+    </button>
   );
-}
+};
 
 export default function ProjectToolsSetupPage() {
   const navigate = useNavigate();
@@ -185,54 +194,31 @@ export default function ProjectToolsSetupPage() {
   const projectTitle = projectTypeLabel(projectType);
 
   return (
-    <div className="flex flex-col h-full bg-gray-50/50">
+    <div className="flex flex-col h-full bg-[#f8fafc]">
       <Helmet>
         <title>Setup — {projectTitle} · Project Tools</title>
       </Helmet>
 
-      {/* ─── TOP HEADER CALCULATION STYLE BAR ─────────────────────────── */}
-      <div className="w-full max-w-[1440px] mx-auto px-2 pt-2 sm:pt-4">
-        {/* Blue Header Card */}
-        <div className="rounded-xl bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] shadow-sm px-3 py-3 sm:px-4 sm:py-4 md:px-6 2xl:px-8 flex flex-col gap-3 sm:gap-4 sm:rounded-t-2xl sm:rounded-b-none">
-          <div className="flex items-center justify-between gap-2 sm:gap-3 w-full">
-            {/* Back Button */}
-            <div className="flex-1 flex justify-start">
-              <button
-                type="button"
-                onClick={() => navigate("/project-tools")}
-                className="flex items-center justify-center gap-1.5 sm:gap-2 min-w-0 max-w-full text-white px-3 py-2 sm:px-4 rounded-lg hp:rounded-md text-xs sm:text-sm font-medium border border-white/20 hover:bg-white/10 active:bg-white/15 transition"
-              >
-                <ArrowLeft className="w-4 h-4 shrink-0" />
-                <span className="truncate">Back to project type</span>
-              </button>
-            </div>
+      {/* ─── TOP BLUE BANNER (Clean single block without white tabs) ─── */}
+      <div className="w-full max-w-[1440px] mx-auto px-2 pt-2 sm:pt-4 mb-4 sm:mb-6">
+        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] shadow-sm px-4 py-3.5 sm:px-6 sm:py-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => navigate("/project-tools")}
+            className="flex items-center justify-center gap-2 text-white px-3.5 py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium border border-white/20 hover:bg-white/10 active:bg-white/15 transition-all shadow-xs"
+          >
+            <ChevronLeft className="w-4 h-4 shrink-0" />
+            <span>Back to project type</span>
+          </button>
 
-            {/* Stepper info */}
-            <div className="text-right">
-              <span className="text-xs text-white/80 font-medium">
-                {projectTitle}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Attached White Stepper Bar */}
-        <div className="hidden sm:block bg-white border border-slate-200 border-t-0 rounded-b-2xl sm:px-4 sm:py-2 md:px-6 2xl:px-8 shadow-sm">
-          <div className="flex items-center gap-2 py-1.5">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-md text-xs font-semibold bg-[#0d3b66] text-white shadow-xs">
-              <Settings className="w-3.5 h-3.5" />
-              <span>Setup</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300" />
-            <div className="flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium text-slate-400">
-              <span>Initial</span>
-            </div>
-          </div>
+          <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:inline">
+            {projectTitle}
+          </span>
         </div>
       </div>
 
-      {/* ─── FORM CONTAINER (matching Initial form ConditionForm) ─────── */}
-      <div className="w-full max-w-[1440px] mx-auto pt-6 pb-24 sm:pb-8 px-2">
+      {/* ─── FORM CONTAINER ─── */}
+      <div className="w-full max-w-[1440px] mx-auto pb-24 sm:pb-8 px-2">
         <div className="bg-white rounded-2xl hp:rounded-xl border border-gray-200 shadow-[0_2px_10px_rgba(15,23,42,0.06)] overflow-hidden">
           {/* Top accent strip */}
           <div
@@ -245,18 +231,22 @@ export default function ProjectToolsSetupPage() {
             <div>
               <SectionTitle>Work Type</SectionTitle>
               <SectionCard>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-6">
-                  <SelectOptionCard
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CardOption
                     label="Calculation"
-                    icon={<Calculator size={16} />}
-                    selected={workType === "calculation"}
-                    onSelect={() => setWorkType("calculation")}
+                    desc="Structural integrity, wind load, and stress analysis"
+                    icon={Calculator}
+                    value="calculation"
+                    current={workType}
+                    onChange={setWorkType}
                   />
-                  <SelectOptionCard
+                  <CardOption
                     label="Drawing"
-                    icon={<PenTool size={16} />}
-                    selected={workType === "drawing"}
-                    onSelect={() => setWorkType("drawing")}
+                    desc="CAD technical drawings and structural drafting"
+                    icon={PenTool}
+                    value="drawing"
+                    current={workType}
+                    onChange={setWorkType}
                   />
                 </div>
               </SectionCard>
@@ -266,18 +256,22 @@ export default function ProjectToolsSetupPage() {
             <div>
               <SectionTitle>Design Type</SectionTitle>
               <SectionCard>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-6">
-                  <SelectOptionCard
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CardOption
                     label="Standard Type"
-                    icon={<Boxes size={16} />}
-                    selected={designType === "standard"}
-                    onSelect={() => setDesignType("standard")}
+                    desc="Standard catalog specifications (STK / IS series)"
+                    icon={Layers}
+                    value="standard"
+                    current={designType}
+                    onChange={setDesignType}
                   />
-                  <SelectOptionCard
+                  <CardOption
                     label="Custom Type"
-                    icon={<Sliders size={16} />}
-                    selected={designType === "custom"}
-                    onSelect={() => setDesignType("custom")}
+                    desc="Custom pole geometry, stepped segments, and specifications"
+                    icon={Sliders}
+                    value="custom"
+                    current={designType}
+                    onChange={setDesignType}
                   />
                 </div>
               </SectionCard>
@@ -286,15 +280,15 @@ export default function ProjectToolsSetupPage() {
             {/* Divider */}
             <div className="border-t border-gray-200" />
 
-            {/* Footer buttons */}
+            {/* Footer Buttons */}
             <div className="flex justify-between items-center pt-4 md:pt-0">
               <button
                 type="button"
                 onClick={() => setShowResetModal(true)}
-                className="flex items-center gap-2 px-5 py-2.5 md:px-6 rounded-lg hp:rounded-md bg-white text-red-500 font-medium text-xs md:text-sm hover:bg-red-50 hover:text-red-600 transition-colors border border-red-300"
+                className="flex items-center gap-2 px-5 py-2.5 md:px-6 rounded-lg hp:rounded-md bg-white text-red-500 font-medium text-xs md:text-sm hover:bg-red-50 hover:text-red-600 transition-colors border border-red-300 shadow-sm"
               >
-                <RotateCcw className="w-4 lg:w-4.5 h-4 lg:h-4.5" />
-                Reset
+                <RotateCcw className="w-4 h-4" />
+                <span>Reset</span>
               </button>
 
               <button
@@ -315,8 +309,8 @@ export default function ProjectToolsSetupPage() {
         open={showResetModal}
         onClose={() => setShowResetModal(false)}
         onReset={handleReset}
-        title="Reset Setup?"
-        description="Are you sure you want to reset setup choices to default values?"
+        title="Reset all inputs on this section?"
+        description="This will clear all inputs entered in this section. This action cannot be undone."
       />
 
       <ToastModal toast={toast} onClose={() => setToast(null)} />
