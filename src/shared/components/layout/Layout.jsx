@@ -78,6 +78,8 @@ export default function Layout() {
   const formattedProjectType = formatProjectType(projectType);
   const isCalculationRoot = location.pathname === "/projects" || location.pathname === "/requests";
   const isCheckingQueue = location.pathname.startsWith("/checking-queue");
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const projectToolsSetupMatch = location.pathname.match(/^\/project-tools\/([^/]+)\/setup/);
   // Covers /projects/new (type picker) and /projects/new/:type (form).
   const isNewRequest = /^\/(projects|requests)\/new(\/|$)/.test(location.pathname);
   // /projects/detail/:requestId — Projects > [its Request No.]
@@ -93,7 +95,17 @@ export default function Layout() {
   const draftCase = draftId ? findRequestOfCase(draftId) : null;
 
   let currentTitle;
-  if (requestDetailId) {
+  if (projectToolsSetupMatch) {
+    const typeSlug = projectToolsSetupMatch[1];
+    const formattedType = formatProjectType(typeSlug);
+    currentTitle = {
+      global: formattedType || "Lighting Project",
+      stage: "Setup",
+      substage: null,
+    };
+  } else if (location.pathname === "/project-tools") {
+    currentTitle = "Project Tools";
+  } else if (requestDetailId) {
     const request = getRequest(requestDetailId);
     currentTitle = {
       global: (request && requestNoOf(request)) || "Project Detail",
@@ -428,12 +440,20 @@ export default function Layout() {
         <Header
           isMobile={isMobile}
           currentTitle={currentTitle}
-          rootLabel="My Works"
+          rootLabel={isProjectTools ? "Project Tools" : "My Works"}
           userData={userData}
           onRootCrumbClick={
-            isNewRequest ? () => leaveNewRequest("/projects") : handleLogoClick
+            isProjectTools
+              ? () => navigate("/project-tools")
+              : isNewRequest
+                ? () => leaveNewRequest("/projects")
+                : handleLogoClick
           }
-          onProjectCrumbClick={handleProjectCrumbClick}
+          onProjectCrumbClick={
+            isProjectTools
+              ? () => navigate("/project-tools")
+              : handleProjectCrumbClick
+          }
           onSetupCrumbClick={handleSetupCrumbClick}
           onOpenMobileSidebar={() => setIsMobileOpen(true)}
           onLogout={() => {

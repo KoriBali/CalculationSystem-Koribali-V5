@@ -57,7 +57,7 @@ export default function ProjectToolsPage() {
       setInDevModal(project);
       return;
     }
-    navigate(`/projects/new/${project.id}`);
+    navigate(`/project-tools/${project.id}/setup`);
   };
 
   return (
@@ -163,11 +163,11 @@ export default function ProjectToolsPage() {
                 type="button"
                 onClick={() => {
                   setInDevModal(null);
-                  navigate("/projects/new/lighting-project");
+                  navigate("/project-tools/lighting-project/setup");
                 }}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#0d3b66] hover:bg-[#0a2c4c] rounded-lg transition-colors shadow-xs"
               >
-                Open Lighting Project
+                Open Lighting Project Setup
               </button>
             </div>
           </div>

@@ -44,6 +44,7 @@ import ProjectDatabasePage from "../features/database/pages/ProjectDatabasePage"
 import CheckingQueuePage from "../features/calculations/pages/CheckingQueuePage";
 import MySubmissionsPage from "../features/calculations/pages/MySubmissionsPage";
 import ProjectToolsPage from "../features/calculations/pages/ProjectToolsPage";
+import ProjectToolsSetupPage from "../features/calculations/pages/ProjectToolsSetupPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
 // Admin Pages
@@ -163,7 +164,10 @@ export default function AppRoutes() {
 
             <Route path="report" element={<Navigate to="/projects" replace />} />
             <Route path="submissions" element={<MySubmissionsPage />} />
-            <Route path="project-tools" element={<ProjectToolsPage />} />
+            <Route path="project-tools">
+              <Route index element={<ProjectToolsPage />} />
+              <Route path=":type/setup" element={<ProjectToolsSetupPage />} />
+            </Route>
             <Route path="database" element={<ProjectDatabasePage />} />
 
             {/* Checking Queue (Drafter Checkers & Admins) */}
