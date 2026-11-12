@@ -61,24 +61,24 @@ export default function ProjectToolsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-full flex flex-col">
       <Helmet>
         <title>Project Tools · KORI BALI</title>
       </Helmet>
 
-      <div className="mx-auto w-full max-w-[1600px] px-6 hp:px-3 py-4 sm:py-6 lg:py-8">
+      <div className="mx-auto w-full max-w-[2800px] px-6 hp:px-3 lg:px-4 2xl:px-8 pt-0 pb-4 sm:pb-6 lg:pb-8">
         {/* Page header */}
-        <div className="w-full max-w-[1400px] mx-auto text-left mb-10">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight mb-2">
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
             Project Tools
           </h1>
           <p className="text-slate-500 mt-1.5 text-sm">
-            Choose the specific project module to begin the structural and load analysis configuration.
+            Choose the specific project module to begin structural calculation and technical drawing configuration.
           </p>
         </div>
 
         {/* Project type cards - clean, professional horizontal layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full max-w-[1400px]">
           {PROJECT_TOOLS_TYPES.map((project) => {
             const Icon = project.icon;
 
