@@ -9,8 +9,8 @@ import {
   Circle,
   Calculator,
   PenTool,
-  Layers,
-  Sliders,
+  FileText,
+  Settings2,
 } from "lucide-react";
 import { projectTypeLabel } from "../constants/projectTypes";
 import { ConfirmResetAllModal } from "../components/modals/ConfirmResetAllModal";
@@ -256,19 +256,19 @@ export default function ProjectToolsSetupPage() {
             <div>
               <SectionTitle>Design Type</SectionTitle>
               <SectionCard>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-2.5">
                   <CardOption
                     label="Standard Type"
-                    desc="Standard catalog specifications (STK / IS series)"
-                    icon={Layers}
+                    desc="Use predefined specifications."
+                    icon={FileText}
                     value="standard"
                     current={designType}
                     onChange={setDesignType}
                   />
                   <CardOption
                     label="Custom Type"
-                    desc="Custom pole geometry, stepped segments, and specifications"
-                    icon={Sliders}
+                    desc="Define your own specifications."
+                    icon={Settings2}
                     value="custom"
                     current={designType}
                     onChange={setDesignType}
