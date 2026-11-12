@@ -16,6 +16,11 @@ import {
   DraftingCompass,
   PencilRuler,
   FolderKanban,
+  PenTool,
+  Ruler,
+  Component,
+  Shapes,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { MENU_ITEMS, SPRING_TRANSITION } from "../../constants/layoutConstants";
@@ -38,6 +43,11 @@ const ICON_MAP = {
   DraftingCompass,
   PencilRuler,
   FolderKanban,
+  PenTool,
+  Ruler,
+  Component,
+  Shapes,
+  SlidersHorizontal,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

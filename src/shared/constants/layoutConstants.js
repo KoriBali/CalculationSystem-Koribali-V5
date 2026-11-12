@@ -7,7 +7,7 @@ export const MENU_ITEMS = [
   // Shared routes
   {
     name: "Project Tools",
-    icon: "DraftingCompass",
+    icon: "PencilRuler",
     path: "/project-tools",
     roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
   },
