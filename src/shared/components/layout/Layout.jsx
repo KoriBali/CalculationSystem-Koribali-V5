@@ -103,7 +103,7 @@ export default function Layout() {
   } else if (isCalculationRoot) {
     currentTitle =
       MENU_ITEMS.find((item) => item.path === "/projects")?.name ??
-      "My Projects";
+      "My Works";
   } else if (isCheckingQueue) {
     currentTitle = "Checking Queue";
   } else if (isNewRequest) {
@@ -170,15 +170,15 @@ export default function Layout() {
     // draft: Projects > [Project Type] > Project Setup > [step].
     currentTitle = draftCase
       ? {
-          global: requestNoOf(draftCase.request) || "Project",
-          stage: `Case ${draftCase.case.no}`,
-          substage: substage ?? "Initial",
-        }
+        global: requestNoOf(draftCase.request) || "Project",
+        stage: `Case ${draftCase.case.no}`,
+        substage: substage ?? "Initial",
+      }
       : {
-          global: formattedProjectType,
-          stage: "Initial",
-          substage,
-        };
+        global: formattedProjectType,
+        stage: "Initial",
+        substage,
+      };
   } else {
     currentTitle =
       MENU_ITEMS.find((item) => location.pathname.startsWith(item.path))
@@ -331,12 +331,12 @@ export default function Layout() {
   // concurrent callers, so this just moves the ~3s gateway round-trip earlier
   // — by the time a form needs it, it's likely already sitting in cache.
   useEffect(() => {
-    getMasterData().catch(() => {});
-    getMasterDesignStandards().catch(() => {});
-    getMasterRegions().catch(() => {});
+    getMasterData().catch(() => { });
+    getMasterDesignStandards().catch(() => { });
+    getMasterRegions().catch(() => { });
     // Coupling master data lives deep in the drawing flow — prefetch it now so
     // it's cached well before the user reaches the coupling page.
-    getCouplingMasterData().catch(() => {});
+    getCouplingMasterData().catch(() => { });
   }, []);
 
   // Close mobile sidebar and reset scroll position on route change
@@ -375,7 +375,7 @@ export default function Layout() {
     navigate("/login");
 
     // Fire-and-forget: invalidate token server-side in background.
-    logoutUser().catch(() => {});
+    logoutUser().catch(() => { });
   };
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900">
@@ -428,7 +428,7 @@ export default function Layout() {
         <Header
           isMobile={isMobile}
           currentTitle={currentTitle}
-          rootLabel="My Projects"
+          rootLabel="My Works"
           userData={userData}
           onRootCrumbClick={
             isNewRequest ? () => leaveNewRequest("/projects") : handleLogoClick

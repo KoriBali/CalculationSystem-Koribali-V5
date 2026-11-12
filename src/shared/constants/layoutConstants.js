@@ -6,9 +6,21 @@ export const MENU_ITEMS = [
 
   // Shared routes
   {
-    name: "My Projects",
-    icon: "Calculator",
+    name: "My Works",
+    icon: "Briefcase",
     path: "/projects",
+    roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
+  },
+  {
+    name: "My Submissions",
+    icon: "SendHorizontal",
+    path: "/submissions",
+    roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
+  },
+  {
+    name: "Project Tools",
+    icon: "Wrench",
+    path: "/project-tools",
     roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
   },
   {

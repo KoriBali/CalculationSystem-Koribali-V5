@@ -10,6 +10,9 @@ import {
   Building2,
   Users,
   ClipboardCheck,
+  Briefcase,
+  SendHorizontal,
+  Wrench,
 } from "lucide-react";
 
 import { MENU_ITEMS, SPRING_TRANSITION } from "../../constants/layoutConstants";
@@ -26,6 +29,9 @@ const ICON_MAP = {
   FileText,
   Database,
   ClipboardCheck,
+  Briefcase,
+  SendHorizontal,
+  Wrench,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
