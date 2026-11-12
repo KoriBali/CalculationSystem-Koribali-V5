@@ -6,8 +6,14 @@ export const MENU_ITEMS = [
 
   // Shared routes
   {
+    name: "Project Tools",
+    icon: "DraftingCompass",
+    path: "/project-tools",
+    roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
+  },
+  {
     name: "My Works",
-    icon: "Briefcase",
+    icon: "FolderKanban",
     path: "/projects",
     roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
   },
@@ -15,12 +21,6 @@ export const MENU_ITEMS = [
     name: "My Submissions",
     icon: "SendHorizontal",
     path: "/submissions",
-    roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
-  },
-  {
-    name: "Project Tools",
-    icon: "Wrench",
-    path: "/project-tools",
     roles: ["superadmin", "admin", "drafter", "drafter_checker", "admin_department"],
   },
   {

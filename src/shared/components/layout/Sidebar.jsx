@@ -13,6 +13,9 @@ import {
   Briefcase,
   SendHorizontal,
   Wrench,
+  DraftingCompass,
+  PencilRuler,
+  FolderKanban,
 } from "lucide-react";
 
 import { MENU_ITEMS, SPRING_TRANSITION } from "../../constants/layoutConstants";
@@ -32,6 +35,9 @@ const ICON_MAP = {
   Briefcase,
   SendHorizontal,
   Wrench,
+  DraftingCompass,
+  PencilRuler,
+  FolderKanban,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
