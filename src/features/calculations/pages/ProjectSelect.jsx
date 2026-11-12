@@ -10,6 +10,8 @@ import {
   ChevronRight,
   ChevronLeft,
   FilePen,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import { PROJECT_TYPES } from "../constants/projectTypes";
 import { DISCARD_NEW_REQUEST_COPY } from "../constants/requestFormOptions";
@@ -146,6 +148,7 @@ const mapCategories = (apiCategories) => {
       description:
         PROJECT_METADATA[pt.id]?.description ||
         "Standard structural calculation module.",
+      isInDevelopment: pt.id !== "lighting-project",
     })).sort((a, b) => getProjectPriority(a.id) - getProjectPriority(b.id));
   }
 
@@ -166,6 +169,7 @@ const mapCategories = (apiCategories) => {
           title: meta.title,
           icon: meta.icon,
           description: meta.description, // Crucial: preserved explanation per user request
+          isInDevelopment: meta.id !== "lighting-project",
           backendCategory: cat,
         };
       }
@@ -185,6 +189,7 @@ const mapCategories = (apiCategories) => {
         title,
         icon: Layers,
         description: `Comprehensive analysis and structural configuration for ${words.toLowerCase()} installations.`,
+        isInDevelopment: true,
         backendCategory: cat,
       };
     })
@@ -208,6 +213,7 @@ export default function ProjectSelectPage() {
     (p) => p.id === unfinishedType,
   )?.title || PROJECT_TYPES.find((p) => p.id === unfinishedType)?.title;
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [inDevModal, setInDevModal] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -225,6 +231,16 @@ export default function ProjectSelectPage() {
   }, []);
 
   const handleSelectProject = (projectId) => {
+    const isLighting =
+      projectId === "lighting-project" || projectId === "lighting";
+    if (!isLighting) {
+      const selected =
+        projectTypesList.find((p) => p.id === projectId) ||
+        PROJECT_TYPES.find((p) => p.id === projectId);
+      setInDevModal(selected || { title: "This Project" });
+      return;
+    }
+
     const isValid =
       projectTypesList.some((p) => p.id === projectId) ||
       PROJECT_TYPES.some((p) => p.id === projectId);
@@ -262,7 +278,7 @@ export default function ProjectSelectPage() {
             className="flex shrink-0 items-center justify-center gap-2 whitespace-nowrap px-5 py-2.5 md:px-6 rounded-lg hp:rounded-md font-medium text-xs sm:text-sm bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] shadow-sm transition-colors"
           >
             <ChevronLeft className="w-4 lg:w-4.5 h-4 lg:h-4.5" />
-            Back to My Projects
+            Back to My Works
           </button>
         </motion.div>
 
@@ -330,9 +346,16 @@ export default function ProjectSelectPage() {
 
                   {/* Text Content */}
                   <div className="flex-grow">
-                    <h3 className="text-base font-semibold text-slate-800 mb-1.5 group-hover:text-blue-700 transition-colors duration-300">
-                      {project.title}
-                    </h3>
+                    <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                      <h3 className="text-base font-semibold text-slate-800 group-hover:text-blue-700 transition-colors duration-300">
+                        {project.title}
+                      </h3>
+                      {project.isInDevelopment && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
+                          In Development
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-slate-500 leading-relaxed pr-4">
                       {project.description}
                     </p>
@@ -348,6 +371,58 @@ export default function ProjectSelectPage() {
           })}
         </div>
       </div>
+
+      {/* Notice modal for in-development project modules */}
+      {inDevModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setInDevModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-base font-bold text-slate-900">
+                {inDevModal.title}
+              </h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                The <strong>{inDevModal.title}</strong> module is currently in development.
+              </p>
+              <div className="mt-3.5 p-3.5 bg-blue-50/80 border border-blue-100 rounded-xl text-xs text-blue-900 leading-relaxed">
+                💡 For the current prototype, please proceed with <strong>Lighting Project</strong> which has full calculation and drawing capabilities ready.
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setInDevModal(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setInDevModal(null);
+                  navigate("/projects/new/lighting-project");
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#0d3b66] hover:bg-[#0a2c4c] rounded-lg transition-colors shadow-xs"
+              >
+                Open Lighting Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmResetAllModal
         {...DISCARD_NEW_REQUEST_COPY}
