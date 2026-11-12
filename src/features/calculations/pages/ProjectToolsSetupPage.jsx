@@ -5,12 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  CheckCircle,
+  CheckCircle2,
   Circle,
   Calculator,
   PenTool,
   FileText,
-  Settings2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { projectTypeLabel } from "../constants/projectTypes";
 import { ConfirmResetAllModal } from "../components/modals/ConfirmResetAllModal";
@@ -18,7 +18,7 @@ import { ToastModal } from "../components/modals/ToastModal";
 
 // Reusable section title with left accent bar
 const SectionTitle = ({ children }) => (
-  <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium">
+  <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-semibold tracking-wide">
     <div className="w-1 h-4 md:h-5 bg-[#3399cc] rounded-full" />
     {children}
   </h3>
@@ -26,36 +26,38 @@ const SectionTitle = ({ children }) => (
 
 // Reusable section card wrapper
 const SectionCard = ({ children }) => (
-  <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200">
+  <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200 shadow-xs">
     {children}
   </div>
 );
 
-// CardOption matching the user's reference code
+// CardOption matching the reference image and code
 const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
   const isActive = current === value;
   return (
     <button
       type="button"
       onClick={() => onChange(value)}
-      className={`group w-full flex items-center justify-between px-3 xl:px-4 py-2.5 lg:py-3 relative overflow-hidden rounded-lg border transition-all duration-300 cursor-pointer active:scale-[0.98] text-left
+      className={`group w-full flex items-center justify-between px-4 py-3 sm:py-3.5 relative overflow-hidden rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.99] text-left
         ${
           isActive
-            ? "border-blue-500 bg-blue-50 shadow-sm ring-1 ring-blue-50"
-            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+            ? "border-blue-500 bg-[#f0f7ff] shadow-xs ring-1 ring-blue-500/20"
+            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
         }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         <div
-          className={`p-1.5 rounded-md transition-colors ${
-            isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+            isActive
+              ? "bg-blue-100/80 text-blue-600"
+              : "bg-slate-100 text-slate-400 group-hover:text-slate-500"
           }`}
         >
-          <Icon className="w-4 h-4 md:w-4.5 md:h-4.5" />
+          <Icon className="w-5 h-5" strokeWidth={1.75} />
         </div>
         <div className="flex flex-col items-start">
           <p
-            className={`text-[12px] md:text-sm font-medium ${
+            className={`text-sm sm:text-[15px] font-medium leading-snug ${
               isActive ? "text-slate-900 font-semibold" : "text-slate-700"
             }`}
           >
@@ -63,7 +65,7 @@ const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
           </p>
           {desc && (
             <p
-              className={`text-[11px] md:text-xs mt-0.5 ${
+              className={`text-xs sm:text-[13px] mt-0.5 leading-normal ${
                 isActive ? "text-slate-500" : "text-slate-400"
               }`}
             >
@@ -72,11 +74,11 @@ const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
           )}
         </div>
       </div>
-      <div className="shrink-0 ml-2 flex items-center">
+      <div className="shrink-0 ml-3 flex items-center">
         {isActive ? (
-          <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+          <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 stroke-[2]" />
         ) : (
-          <Circle className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-slate-400" />
+          <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300 group-hover:text-slate-400 stroke-[1.5]" />
         )}
       </div>
     </button>
@@ -256,7 +258,7 @@ export default function ProjectToolsSetupPage() {
             <div>
               <SectionTitle>Design Type</SectionTitle>
               <SectionCard>
-                <div className="grid grid-cols-1 gap-2.5">
+                <div className="grid grid-cols-1 gap-3">
                   <CardOption
                     label="Standard Type"
                     desc="Use predefined specifications."
@@ -268,7 +270,7 @@ export default function ProjectToolsSetupPage() {
                   <CardOption
                     label="Custom Type"
                     desc="Define your own specifications."
-                    icon={Settings2}
+                    icon={SlidersHorizontal}
                     value="custom"
                     current={designType}
                     onChange={setDesignType}
