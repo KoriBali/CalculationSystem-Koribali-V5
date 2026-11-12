@@ -5,12 +5,12 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  CheckCircle2,
+  CheckCircle,
   Circle,
   Calculator,
   PenTool,
-  FileText,
-  SlidersHorizontal,
+  Layers,
+  Sliders,
 } from "lucide-react";
 import { projectTypeLabel } from "../constants/projectTypes";
 import { ConfirmResetAllModal } from "../components/modals/ConfirmResetAllModal";
@@ -18,7 +18,7 @@ import { ToastModal } from "../components/modals/ToastModal";
 
 // Reusable section title with left accent bar
 const SectionTitle = ({ children }) => (
-  <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-semibold tracking-wide">
+  <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium">
     <div className="w-1 h-4 md:h-5 bg-[#3399cc] rounded-full" />
     {children}
   </h3>
@@ -26,59 +26,52 @@ const SectionTitle = ({ children }) => (
 
 // Reusable section card wrapper
 const SectionCard = ({ children }) => (
-  <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200 shadow-xs">
+  <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200">
     {children}
   </div>
 );
 
-// CardOption matching the reference image and code
+// CardOption matching the user's reference code
 const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
   const isActive = current === value;
   return (
     <button
       type="button"
       onClick={() => onChange(value)}
-      className={`group w-full flex items-center justify-between px-4 py-3 sm:py-3.5 relative overflow-hidden rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.99] text-left
-        ${
-          isActive
-            ? "border-blue-500 bg-[#f0f7ff] shadow-xs ring-1 ring-blue-500/20"
-            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+      className={`group w-full flex items-center justify-between px-3 xl:px-4 py-2.5 lg:py-3 relative overflow-hidden rounded-lg border transition-all duration-300 cursor-pointer active:scale-[0.98] ${isActive
+          ? "border-blue-500 bg-blue-50 shadow-sm ring-1 ring-blue-50"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
         }`}
     >
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-            isActive
-              ? "bg-blue-100/80 text-blue-600"
-              : "bg-slate-100 text-slate-400 group-hover:text-slate-500"
-          }`}
-        >
-          <Icon className="w-5 h-5" strokeWidth={1.75} />
-        </div>
-        <div className="flex flex-col items-start">
-          <p
-            className={`text-sm sm:text-[15px] font-medium leading-snug ${
-              isActive ? "text-slate-900 font-semibold" : "text-slate-700"
+          className={`p-1.5 rounded-md ${isActive
+              ? "bg-blue-100 text-blue-600"
+              : "bg-slate-100 text-slate-500"
             }`}
+        >
+          <Icon size={16} />
+        </div>
+        <div className="flex flex-col items-start text-left">
+          <p
+            className={`text-[12px] md:text-sm font-medium ${isActive ? "text-slate-900" : "text-slate-700"
+              }`}
           >
             {label}
           </p>
-          {desc && (
-            <p
-              className={`text-xs sm:text-[13px] mt-0.5 leading-normal ${
-                isActive ? "text-slate-500" : "text-slate-400"
+          <p
+            className={`text-[11px] md:text-xs mt-0.5 ${isActive ? "text-slate-500" : "text-slate-400"
               }`}
-            >
-              {desc}
-            </p>
-          )}
+          >
+            {desc}
+          </p>
         </div>
       </div>
-      <div className="shrink-0 ml-3 flex items-center">
+      <div className="shrink-0 ml-2 flex items-center">
         {isActive ? (
-          <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 stroke-[2]" />
+          <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
         ) : (
-          <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300 group-hover:text-slate-400 stroke-[1.5]" />
+          <Circle className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-slate-400" />
         )}
       </div>
     </button>
@@ -184,9 +177,8 @@ export default function ProjectToolsSetupPage() {
       setToast({
         type: "success",
         title: "Setup Saved",
-        message: `Saved: ${workType === "calculation" ? "Calculation" : "Drawing"} · ${
-          designType === "standard" ? "Standard Type" : "Custom Type"
-        }. Session storage ready.`,
+        message: `Saved: ${workType === "calculation" ? "Calculation" : "Drawing"} · ${designType === "standard" ? "Standard Type" : "Custom Type"
+          }. Session storage ready.`,
       });
     } catch (err) {
       console.error("Failed to save setup:", err);
@@ -258,11 +250,11 @@ export default function ProjectToolsSetupPage() {
             <div>
               <SectionTitle>Design Type</SectionTitle>
               <SectionCard>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CardOption
                     label="Standard Type"
                     desc="Use predefined specifications."
-                    icon={FileText}
+                    icon={Layers}
                     value="standard"
                     current={designType}
                     onChange={setDesignType}
@@ -270,7 +262,7 @@ export default function ProjectToolsSetupPage() {
                   <CardOption
                     label="Custom Type"
                     desc="Define your own specifications."
-                    icon={SlidersHorizontal}
+                    icon={Sliders}
                     value="custom"
                     current={designType}
                     onChange={setDesignType}
