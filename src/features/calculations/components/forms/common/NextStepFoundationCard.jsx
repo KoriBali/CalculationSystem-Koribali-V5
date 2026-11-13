@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle, Circle, ChevronRight, FileText } from "lucide-react";
+import { notifyCalculationProgressChanged } from "../../../utils/calculationProgressEvent";
 
 /**
  * NextStepFoundationCard
@@ -47,7 +48,23 @@ export function NextStepFoundationCard({
     setSelectedOption(opt);
     try {
       sessionStorage.setItem(storageKey, opt);
-    } catch {}
+
+      const raw = sessionStorage.getItem(`${projectType}_condition`);
+      const prev = raw ? JSON.parse(raw) : {};
+      const next = { ...prev, foundationEnabled: opt === "foundation" };
+      sessionStorage.setItem(`${projectType}_condition`, JSON.stringify(next));
+
+      const rawConfig = sessionStorage.getItem(`${projectType}_calculation_config`);
+      const prevConfig = rawConfig ? JSON.parse(rawConfig) : {};
+      sessionStorage.setItem(
+        `${projectType}_calculation_config`,
+        JSON.stringify({ ...prevConfig, foundation: opt === "foundation" })
+      );
+
+      notifyCalculationProgressChanged();
+    } catch (e) {
+      console.warn("Failed to update foundation choice:", e);
+    }
   };
 
   const isBaseplate = parentType === "baseplate";

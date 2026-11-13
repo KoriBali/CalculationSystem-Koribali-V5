@@ -33,10 +33,6 @@ export function useReport(projectType) {
     }
   };
 
-  // Read condition once at hook level — used to determine which steps are enabled
-  const condition = read("condition", {});
-  const { openingEnabled, baseplateEnabled, foundationEnabled } = condition;
-
   // ── Validation helpers ──
 
   // Checks whether a calculated result object has actual data
@@ -49,8 +45,11 @@ export function useReport(projectType) {
     calculatedOp,
     calculatedBaseplate,
     calculatedFoundation,
+    liveCond,
     showToast,
   ) => {
+    const { openingEnabled, baseplateEnabled, foundationEnabled } = liveCond || {};
+
     // Pole results are always required regardless of flags
     if (!results?.length) {
       if (showToast) {
@@ -201,6 +200,12 @@ export function useReport(projectType) {
 
     // Read live condition at call time to ensure accurate step flags
     const liveCondition = read("condition", {}) || {};
+    const foundationChoice = sessionStorage.getItem(`${projectType}_foundation_step_choice`);
+    if (foundationChoice === "finish") {
+      liveCondition.foundationEnabled = false;
+    } else if (foundationChoice === "foundation") {
+      liveCondition.foundationEnabled = true;
+    }
     const { openingEnabled, baseplateEnabled, foundationEnabled } = liveCondition;
 
     // Read all results from sessionStorage at call time
@@ -294,6 +299,7 @@ export function useReport(projectType) {
       calculatedOp,
       calculatedBaseplate,
       calculatedFoundation,
+      liveCondition,
       showToast,
     );
     if (!isResultsValid) {
