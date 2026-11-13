@@ -66,7 +66,7 @@ export default function ProjectToolsPage() {
         <title>Project Tools · KORI BALI</title>
       </Helmet>
 
-      <div className="mx-auto w-full max-w-[1600px] px-6 hp:px-3 py-4 sm:py-6 lg:py-8 pt-0">
+      <div className="mx-auto w-full max-w-[1600px] px-6 hp:px-3 lg:px-4 2xl:px-8 pt-0 pb-8">
         {/* Page header */}
         <div className="w-full max-w-[1400px] mx-auto text-left mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">

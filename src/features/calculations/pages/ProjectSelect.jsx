@@ -256,7 +256,7 @@ export default function ProjectSelectPage() {
       <Helmet>
         <title>Select Project Type — New Project · KORI BALI</title>
       </Helmet>
-      <div className="mx-auto w-full max-w-[1600px] px-6 hp:px-3 py-4 sm:py-6 lg:py-8 pt-0">
+      <div className="mx-auto w-full max-w-[1600px] px-6 hp:px-3 lg:px-4 2xl:px-8 pt-0 pb-8">
         {/* ── Page header ── */}
         <motion.div
           {...HEADER_ANIMATION}
