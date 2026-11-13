@@ -167,6 +167,7 @@ export default function AppRoutes() {
             <Route path="project-tools">
               <Route index element={<ProjectToolsPage />} />
               <Route path=":type" element={<TypeGuard />}>
+                <Route index element={<Navigate to="setup" replace />} />
                 <Route path="setup" element={<ProjectToolsSetupPage />} />
                 <Route element={<SessionGuard />}>
                   {/* Calculation Steps */}

@@ -8,6 +8,7 @@ import {
   getCaseRunReport,
   saveReportHeader,
   buildReportHeaderPayload,
+  previewProjectToolsReport,
 } from "../../calculations/services/requestService";
 import { findRequestOfCase } from "../../calculations/data/requestStore";
 
@@ -208,54 +209,78 @@ export function useReport(projectType) {
     const resultsOhw = read("resultsOhw", []);
     const resultsArm = read("resultsArm", []);
 
-    const activeDraftId =
-      draftIdOverride ||
-      sessionStorage.getItem(`${projectType}_active_draft_id`);
-    const foundReq = activeDraftId ? findRequestOfCase(activeDraftId) : null;
-    const reqId =
-      foundReq?.request?.id || sessionStorage.getItem("active_request_id");
+    const isProjectTools =
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/project-tools");
 
-    const contextualDefaults = getContextualCoverDefaults(
-      projectType,
-      activeDraftId,
-      reqId,
-    );
-    const rawCover = coverOverride || read("cover", {}) || {};
-    const mergedCover = {
-      ...contextualDefaults,
-      ...rawCover,
-      reportNumber:
-        rawCover.reportNumber ||
-        rawCover.calculationNumber ||
-        contextualDefaults.reportNumber,
-      calculationNumber:
-        rawCover.reportNumber ||
-        rawCover.calculationNumber ||
-        contextualDefaults.calculationNumber,
-      title1:
-        rawCover.title1 ||
-        rawCover.projectName ||
-        contextualDefaults.title1,
-      projectName:
-        rawCover.title1 ||
-        rawCover.projectName ||
-        contextualDefaults.projectName,
-      title2:
-        rawCover.title2 !== undefined && rawCover.title2 !== ""
-          ? rawCover.title2
-          : contextualDefaults.title2,
-      coverTopText:
-        rawCover.coverTopText !== undefined && rawCover.coverTopText !== ""
-          ? rawCover.coverTopText
-          : contextualDefaults.coverTopText,
-      region: rawCover.region || contextualDefaults.region,
-      author: rawCover.author || contextualDefaults.author,
-      responsibleDepartment:
-        rawCover.responsibleDepartment ||
-        contextualDefaults.responsibleDepartment,
-      date: rawCover.date || contextualDefaults.date,
-    };
-    const cover = normalizeCover(mergedCover);
+    const activeDraftId = isProjectTools
+      ? null
+      : (draftIdOverride || sessionStorage.getItem(`${projectType}_active_draft_id`));
+    const foundReq = activeDraftId ? findRequestOfCase(activeDraftId) : null;
+    const reqId = isProjectTools
+      ? null
+      : (foundReq?.request?.id || sessionStorage.getItem("active_request_id"));
+
+    let cover;
+    if (isProjectTools) {
+      cover = {
+        reportNumber: "",
+        calculationNumber: "",
+        managementCode: "",
+        title1: "",
+        projectName: "",
+        title2: "",
+        coverTopText: "",
+        title3: "",
+        coverBottomText: "",
+        client: "",
+        author: "",
+        companyName: "",
+        date: "",
+      };
+    } else {
+      const contextualDefaults = getContextualCoverDefaults(
+        projectType,
+        activeDraftId,
+        reqId,
+      );
+      const rawCover = coverOverride || read("cover", {}) || {};
+      const mergedCover = {
+        ...contextualDefaults,
+        ...rawCover,
+        reportNumber:
+          rawCover.reportNumber ||
+          rawCover.calculationNumber ||
+          contextualDefaults.reportNumber,
+        calculationNumber:
+          rawCover.reportNumber ||
+          rawCover.calculationNumber ||
+          contextualDefaults.calculationNumber,
+        title1:
+          rawCover.title1 ||
+          rawCover.projectName ||
+          contextualDefaults.title1,
+        projectName:
+          rawCover.title1 ||
+          rawCover.projectName ||
+          contextualDefaults.projectName,
+        title2:
+          rawCover.title2 !== undefined && rawCover.title2 !== ""
+            ? rawCover.title2
+            : contextualDefaults.title2,
+        coverTopText:
+          rawCover.coverTopText !== undefined && rawCover.coverTopText !== ""
+            ? rawCover.coverTopText
+            : contextualDefaults.coverTopText,
+        region: rawCover.region || contextualDefaults.region,
+        author: rawCover.author || contextualDefaults.author,
+        responsibleDepartment:
+          rawCover.responsibleDepartment ||
+          contextualDefaults.responsibleDepartment,
+        date: rawCover.date || contextualDefaults.date,
+      };
+      cover = normalizeCover(mergedCover);
+    }
     sessionStorage.setItem(`${projectType}_cover`, JSON.stringify(cover));
 
     // Read calculated results for optional steps
@@ -434,6 +459,82 @@ export function useReport(projectType) {
         setIsGeneratingReport(false);
         return false;
       }
+    } else if (isProjectTools && poleHeightId) {
+      try {
+        const std = String(liveCondition?.designStandard || liveCondition?.standard || "").toLowerCase();
+        const isOldJil =
+          (std.includes("jil") ||
+            std.includes("lighting") ||
+            std === "old_lighting_pole" ||
+            std === "old_jil" ||
+            std === "jil") &&
+          !std.includes("new");
+
+        const rawDoList =
+          Array.isArray(resultsDo) && resultsDo.length > 0
+            ? resultsDo
+            : Array.isArray(poleConfig?.directObjects) && poleConfig.directObjects.length > 0
+              ? poleConfig.directObjects
+              : [];
+
+        const calcDirectObjects = rawDoList.map((d) => {
+          const rawH = Number(d.zHeight || 8000);
+          const elevationM = rawH > 100 ? rawH / 1000 : rawH;
+          return {
+            name: d.name || "灯具",
+            objectKind: isOldJil ? "omni" : (d.type || "omni"),
+            frontAreaM2: Number(d.frontArea || 0.1),
+            sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
+            fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
+            massPerUnitKg: Number(d.weight || 14),
+            elevationM,
+            baseWindCoefficient: Number(d.nnC || d.baseWindCoefficient || 1.0),
+            quantity: Number(d.quantity || 1),
+          };
+        });
+
+        const groundPosition =
+          taperStandard?.groundPosition ||
+          taperStandard?.installationPole ||
+          (liveCondition?.groundPosition === "embedment" ? "embedded" : "onGL");
+
+        const toolPayload = {
+          conditions: {
+            designStandard:
+              liveCondition.designStandard || liveCondition.standard || "standard",
+            windSpeed: Number(liveCondition.windSpeed || 0),
+            airDensity: Number(liveCondition.airDensity || 1.2),
+            roughnessCategory: liveCondition.roughnessCategory || null,
+            importanceFactor: liveCondition.importanceFactor
+              ? Number(liveCondition.importanceFactor)
+              : null,
+            responseRatio: liveCondition.responseRatio
+              ? Number(liveCondition.responseRatio)
+              : null,
+          },
+          input: {
+            poleStandardHeightId: poleHeightId,
+            directObjects: calcDirectObjects,
+            overheadWires: [],
+            arms: [],
+            groundPosition,
+            embedmentLengthMm:
+              taperStandard?.installationPole === "embedment" && taperStandard?.embedmentLength
+                ? Number(taperStandard.embedmentLength)
+                : null,
+          },
+        };
+
+        const rep = await previewProjectToolsReport(toolPayload).catch((err) => {
+          console.warn("previewProjectToolsReport API call error/fallback:", err?.message);
+          return null;
+        });
+        if (rep) {
+          officialReport = rep;
+        }
+      } catch (ptErr) {
+        console.warn("Project tools preview report warning:", ptErr);
+      }
     }
 
     await ensureMinimumWait(600);
@@ -465,7 +566,9 @@ export function useReport(projectType) {
       }
     }
 
-    if (activeDraftId) {
+    if (isProjectTools) {
+      navigate(`/project-tools/${projectType}/report`, { state: finalReportPayload });
+    } else if (activeDraftId) {
       saveWorkingSessionToDraft(projectType, activeDraftId);
       navigate(`/projects/${projectType}/${activeDraftId}/report`, { state: finalReportPayload });
     } else {

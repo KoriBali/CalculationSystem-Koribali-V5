@@ -38,15 +38,15 @@ const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
       type="button"
       onClick={() => onChange(value)}
       className={`group w-full flex items-center justify-between px-3 xl:px-4 py-2.5 lg:py-3 relative overflow-hidden rounded-lg border transition-all duration-300 cursor-pointer active:scale-[0.98] ${isActive
-          ? "border-blue-500 bg-blue-50 shadow-sm ring-1 ring-blue-50"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+        ? "border-blue-500 bg-blue-50 shadow-sm ring-1 ring-blue-50"
+        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
         }`}
     >
       <div className="flex items-center gap-3">
         <div
           className={`p-1.5 rounded-md ${isActive
-              ? "bg-blue-100 text-blue-600"
-              : "bg-slate-100 text-slate-500"
+            ? "bg-blue-100 text-blue-600"
+            : "bg-slate-100 text-slate-500"
             }`}
         >
           <Icon size={16} />
@@ -129,16 +129,35 @@ export default function ProjectToolsSetupPage() {
         `${projectType}_workflow`,
         JSON.stringify({ projectMode: workType, withReport: false })
       );
+      const existingRaw = sessionStorage.getItem(`${projectType}_condition`);
+      let existingCondition = {};
+      try {
+        existingCondition = existingRaw ? JSON.parse(existingRaw) : {};
+      } catch (e) { }
+
       sessionStorage.setItem(
         `${projectType}_condition`,
         JSON.stringify({
-          designStandard: "jil",
-          designWindSpeed: 60,
-          designAirDensity: 1.225,
+          designStandard:
+            existingCondition.designStandard === "new_jil"
+              ? "new_jil"
+              : "old_lighting_pole",
+          designWindSpeed: existingCondition.designWindSpeed || "60",
+          designAirDensity: existingCondition.designAirDensity || "1.23",
+          horizontalAcceleration:
+            existingCondition.horizontalAcceleration || "4.71",
+          responseRatio: existingCondition.responseRatio || "1.00",
           poleType: designType,
-          openingEnabled: true,
-          baseplateEnabled: true,
-          foundationEnabled: false,
+          openingEnabled:
+            existingCondition.openingEnabled !== undefined
+              ? existingCondition.openingEnabled
+              : true,
+          baseplateEnabled:
+            existingCondition.baseplateEnabled === true,
+          foundationEnabled:
+            existingCondition.foundationEnabled !== undefined
+              ? existingCondition.foundationEnabled
+              : false,
         })
       );
       sessionStorage.setItem(
@@ -146,7 +165,7 @@ export default function ProjectToolsSetupPage() {
         JSON.stringify({
           pole: true,
           opening: true,
-          baseplate: true,
+          baseplate: existingCondition.baseplateEnabled === true,
           foundation: false,
         })
       );
@@ -208,16 +227,35 @@ export default function ProjectToolsSetupPage() {
         `${projectType}_workflow`,
         JSON.stringify({ projectMode: workType, withReport: false })
       );
+      const existingRaw = sessionStorage.getItem(`${projectType}_condition`);
+      let existingCondition = {};
+      try {
+        existingCondition = existingRaw ? JSON.parse(existingRaw) : {};
+      } catch (e) { }
+
       sessionStorage.setItem(
         `${projectType}_condition`,
         JSON.stringify({
-          designStandard: "jil",
-          designWindSpeed: 60,
-          designAirDensity: 1.225,
+          designStandard:
+            existingCondition.designStandard === "new_jil"
+              ? "new_jil"
+              : "old_lighting_pole",
+          designWindSpeed: existingCondition.designWindSpeed || "60",
+          designAirDensity: existingCondition.designAirDensity || "1.23",
+          horizontalAcceleration:
+            existingCondition.horizontalAcceleration || "4.71",
+          responseRatio: existingCondition.responseRatio || "1.00",
           poleType: designType,
-          openingEnabled: true,
-          baseplateEnabled: true,
-          foundationEnabled: false,
+          openingEnabled:
+            existingCondition.openingEnabled !== undefined
+              ? existingCondition.openingEnabled
+              : true,
+          baseplateEnabled:
+            existingCondition.baseplateEnabled === true,
+          foundationEnabled:
+            existingCondition.foundationEnabled !== undefined
+              ? existingCondition.foundationEnabled
+              : false,
         })
       );
       sessionStorage.setItem(
@@ -225,7 +263,7 @@ export default function ProjectToolsSetupPage() {
         JSON.stringify({
           pole: true,
           opening: true,
-          baseplate: true,
+          baseplate: existingCondition.baseplateEnabled === true,
           foundation: false,
         })
       );

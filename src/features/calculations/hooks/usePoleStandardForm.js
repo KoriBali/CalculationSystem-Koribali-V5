@@ -17,8 +17,10 @@ export function usePoleStandardForm(projectType) {
     "taperPoleStandard",
     {
       poleType: "",
+      installationPole: "",
       groundPosition: "",
       height: "",
+      embedmentLength: "",
     },
   );
 

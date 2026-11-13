@@ -15,12 +15,14 @@ import { notifyCalculationProgressChanged } from "../utils/calculationProgressEv
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
 const getDefaultCondition = (projectType) => ({
-  designStandard: "",
-  designWindSpeed: "",
-  designAirDensity: "",
+  designStandard: "old_lighting_pole",
+  designWindSpeed: "60",
+  designAirDensity: "1.23",
+  horizontalAcceleration: "4.71",
+  responseRatio: "1.00",
   poleType: projectType === "lighting-project" ? "standard" : "custom",
-  openingEnabled: projectType === "lighting-project",
-  baseplateEnabled: projectType === "lighting-project",
+  openingEnabled: true,
+  baseplateEnabled: false,
   foundationEnabled: false,
 });
 
@@ -40,14 +42,29 @@ export function useConditionForm() {
 
   // Local draft — tidak langsung persist, hanya commit saat proceed
   const [localCondition, setLocalCondition] = useState(() => {
+    const std = condition?.designStandard;
+    const normalizedStd =
+      std === "jil" || std === "old_jil"
+        ? "old_lighting_pole"
+        : std || "old_lighting_pole";
+
+    const base = {
+      ...condition,
+      designStandard: normalizedStd,
+      designWindSpeed: condition?.designWindSpeed || "60",
+      designAirDensity: condition?.designAirDensity || "1.23",
+      horizontalAcceleration: condition?.horizontalAcceleration || "4.71",
+      responseRatio: condition?.responseRatio || "1.00",
+    };
+
     if (condition?.poleType === "standard") {
       return {
-        ...condition,
+        ...base,
         openingEnabled: true,
-        baseplateEnabled: true,
+        baseplateEnabled: condition?.baseplateEnabled === true,
       };
     }
-    return condition;
+    return base;
   });
   const [prevCondition, setPrevCondition] = useState(condition);
   const [errors, setErrors] = useState({});
@@ -59,7 +76,9 @@ export function useConditionForm() {
     const next = applyStandardDefaults(updates);
     if (next.poleType === "standard") {
       next.openingEnabled = true;
-      next.baseplateEnabled = true;
+      if (next.baseplateEnabled === undefined) {
+        next.baseplateEnabled = localCondition?.baseplateEnabled === true;
+      }
     }
     setLocalCondition((prev) => ({ ...prev, ...next }));
 

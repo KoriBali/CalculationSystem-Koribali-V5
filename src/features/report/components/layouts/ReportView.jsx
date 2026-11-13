@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Calculator,
   SendHorizontal,
+  Save,
 } from "lucide-react";
 import { EmptyReport } from "../../../../assets/icon";
 import { ConfirmSaveDatabaseModal } from "../../../calculations/components/modals/ConfirmSaveDatabaseModal";
@@ -67,10 +68,12 @@ export function ReportView() {
   const location = useLocation();
   const params = useParams();
 
+  const isProjectTools = location.pathname.startsWith("/project-tools");
   const projectType =
     params.type || sessionStorage.getItem("projectType") || "lighting-project";
-  const draftId =
-    params.draftId || sessionStorage.getItem(`${projectType}_active_draft_id`);
+  const draftId = isProjectTools
+    ? null
+    : (params.draftId || sessionStorage.getItem(`${projectType}_active_draft_id`));
 
   // If opened via /requests/:type/:draftId/report, ensure draft data is restored to session
   useEffect(() => {
@@ -571,6 +574,21 @@ export function ReportView() {
       sessionCover?.companyName ||
       "";
 
+    if (isProjectTools) {
+      return {
+        ...normalized,
+        projectName: sessionCover?.projectName || reportData?.cover?.projectName || "",
+        title1: sessionCover?.title1 || reportData?.cover?.title1 || "",
+        calculationNumber: sessionCover?.calculationNumber || reportData?.cover?.calculationNumber || "",
+        reportNumber: sessionCover?.reportNumber || reportData?.cover?.reportNumber || "",
+        companyName: sessionCover?.companyName || reportData?.cover?.companyName || "",
+        date: sessionCover?.date || reportData?.cover?.date || "",
+        managementCode: sessionCover?.managementCode || reportData?.cover?.managementCode || "",
+        coverTopText: sessionCover?.coverTopText || reportData?.cover?.coverTopText || "",
+        coverBottomText: sessionCover?.coverBottomText || reportData?.cover?.coverBottomText || "",
+      };
+    }
+
     return {
       ...normalized,
       projectName: normalized.projectName || fallbackProjName,
@@ -580,6 +598,7 @@ export function ReportView() {
       companyName: normalized.companyName || fallbackCompany,
     };
   }, [
+    isProjectTools,
     editedCover,
     sessionCover,
     serverCover,
@@ -668,7 +687,20 @@ export function ReportView() {
 
   const onBackCalculation = () => {
     if (location.pathname.startsWith("/project-tools")) {
-      navigate(`/project-tools/${projectType}/initial`);
+      let cond = {};
+      try {
+        cond = JSON.parse(sessionStorage.getItem(`${projectType}_condition`) || "{}");
+      } catch {}
+      const choice = sessionStorage.getItem(`${projectType}_foundation_step_choice`);
+      let targetStep = "pole";
+      if (cond?.foundationEnabled || choice === "foundation") {
+        targetStep = "foundation";
+      } else if (cond?.baseplateEnabled) {
+        targetStep = "baseplate";
+      } else if (cond?.openingEnabled) {
+        targetStep = "opening";
+      }
+      navigate(`/project-tools/${projectType}/${targetStep}`);
       return;
     }
     if (projectType && draftId) {
@@ -981,67 +1013,105 @@ export function ReportView() {
           <div className="flex items-center justify-between gap-2 sm:gap-4 overflow-x-auto scrollbar-none">
             {/* Back Buttons */}
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={onBackRequest}
-                className="h-9 px-3 sm:px-4 rounded-lg font-medium bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] text-xs sm:text-sm ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
-                title="Back to Project Detail"
-              >
-                <ArrowLeft className="w-4 h-4 shrink-0" />
-                <span className="hidden xl:inline">Back to Project Detail</span>
-                <span className="hidden sm:inline xl:hidden">Project Detail</span>
-                <span className="sm:hidden">Back</span>
-              </button>
-
-              {draftId && (
+              {isProjectTools ? (
                 <button
                   onClick={onBackCalculation}
                   className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-white text-[#0d3b66] border border-[#0d3b66] rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
-                  title="Back to Calculation Form"
+                  title="Back to Calculation"
                 >
-                  <Calculator className="w-4 h-4 shrink-0" />
-                  <span className="hidden md:inline">Calculation</span>
-                  <span className="md:hidden">Calc</span>
+                  <ArrowLeft className="w-4 h-4 shrink-0" />
+                  <span>Back to Calculation</span>
                 </button>
+              ) : (
+                <>
+                  <button
+                    onClick={onBackRequest}
+                    className="h-9 px-3 sm:px-4 rounded-lg font-medium bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] text-xs sm:text-sm ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                    title="Back to Project Detail"
+                  >
+                    <ArrowLeft className="w-4 h-4 shrink-0" />
+                    <span className="hidden xl:inline">Back to Project Detail</span>
+                    <span className="hidden sm:inline xl:hidden">Project Detail</span>
+                    <span className="sm:hidden">Back</span>
+                  </button>
+
+                  {draftId && (
+                    <button
+                      onClick={onBackCalculation}
+                      className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-white text-[#0d3b66] border border-[#0d3b66] rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
+                      title="Back to Calculation Form"
+                    >
+                      <Calculator className="w-4 h-4 shrink-0" />
+                      <span className="hidden md:inline">Calculation</span>
+                      <span className="md:hidden">Calc</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              {/* Edit Cover Information Button */}
-              {!isReadOnly && (
-                <button
-                  onClick={() => setShowEditCoverModal(true)}
-                  title="Edit Report Cover Information"
-                  className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-white text-[#0d3b66] border border-[#0d3b66] rounded-lg hover:bg-blue-50 transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
-                >
-                  <FileEdit className="w-4 h-4 text-[#0d3b66] shrink-0" />
-                  <span className="hidden xl:inline">Edit Cover Information</span>
-                  <span className="hidden md:inline xl:hidden">Edit Cover</span>
-                  <span className="md:hidden">Cover</span>
-                </button>
-              )}
+              {isProjectTools ? (
+                <>
+                  <button
+                    onClick={handlePrint}
+                    title="Export PDF"
+                    className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] rounded-lg transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
+                  >
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Export to PDF</span>
+                    <span className="sm:hidden">PDF</span>
+                  </button>
 
-              <button
-                onClick={handlePrint}
-                title="Export PDF"
-                className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] rounded-lg transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
-              >
-                <Download className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">Export PDF</span>
-                <span className="sm:hidden">PDF</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    title="Save Draft (Coming soon)"
+                    className="h-9 px-3.5 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] text-white rounded-lg hover:brightness-105 transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap cursor-pointer font-medium"
+                  >
+                    <Save className="w-4 h-4 shrink-0" />
+                    <span>Save Draft</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => setShowEditCoverModal(true)}
+                      title="Edit Report Cover Information"
+                      className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-white text-[#0d3b66] border border-[#0d3b66] rounded-lg hover:bg-blue-50 transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
+                    >
+                      <FileEdit className="w-4 h-4 text-[#0d3b66] shrink-0" />
+                      <span className="hidden xl:inline">Edit Cover Information</span>
+                      <span className="hidden md:inline xl:hidden">Edit Cover</span>
+                      <span className="md:hidden">Cover</span>
+                    </button>
+                  )}
 
-              {!isReadOnly && draftId && (
-                <button
-                  onClick={() => setShowDbModal(true)}
-                  title="Save calculations and submit case as Ready for Check"
-                  className="h-9 px-3.5 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] text-white rounded-lg hover:brightness-110 transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
-                >
-                  <SendHorizontal className="w-4 h-4 shrink-0" />
-                  <span className="hidden xl:inline">Ready for Check</span>
-                  <span className="hidden md:inline xl:hidden">Ready for Check</span>
-                  <span className="md:hidden">Ready</span>
-                </button>
+                  <button
+                    onClick={handlePrint}
+                    title="Export PDF"
+                    className="h-9 px-3 sm:px-4 text-xs sm:text-sm bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] rounded-lg transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
+                  >
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Export PDF</span>
+                    <span className="sm:hidden">PDF</span>
+                  </button>
+
+                  {!isReadOnly && draftId && (
+                    <button
+                      onClick={() => setShowDbModal(true)}
+                      title="Save calculations and submit case as Ready for Check"
+                      className="h-9 px-3.5 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] text-white rounded-lg hover:brightness-110 transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer font-medium"
+                    >
+                      <SendHorizontal className="w-4 h-4 shrink-0" />
+                      <span className="hidden xl:inline">Ready for Check</span>
+                      <span className="hidden md:inline xl:hidden">Ready for Check</span>
+                      <span className="md:hidden">Ready</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

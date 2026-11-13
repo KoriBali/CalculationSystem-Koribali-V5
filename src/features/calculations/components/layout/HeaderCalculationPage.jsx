@@ -994,45 +994,43 @@ export function HeaderCalculationPage() {
 
                 {/* SAVE DRAFT + MINIMIZE / PROJECT TITLE */}
                 <div className="flex-1 flex items-center justify-end gap-2 relative">
-                  {isProjectTools ? (
-                    <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:inline">
-                      {projectTypeLabel(type)}
-                    </span>
-                  ) : isReadOnly ? (
-                    <button
-                      type="button"
-                      data-readonly-trigger="true"
-                      onClick={handleToggleReadOnlyPopover}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 shrink-0 whitespace-nowrap rounded-lg hp:rounded-md text-xs sm:text-sm font-medium bg-amber-400/15 hover:bg-amber-400/25 active:bg-amber-400/30 border border-amber-300/40 text-amber-200 shadow-xs backdrop-blur-sm transition-all active:scale-[0.98]"
-                      title="Read-Only Mode: Click for details"
-                    >
-                      <Lock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                      <span className="text-amber-100 font-semibold tracking-wide">Read-Only</span>
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-amber-300/80 transition-transform duration-200 shrink-0 ${
-                          showReadOnlyPopover ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isSavingDraft}
-                      onClick={handleQuickSave}
-                      className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 shrink-0 whitespace-nowrap border rounded-lg hp:rounded-md text-xs sm:text-sm font-medium transition bg-white/10 hover:bg-white/20 active:bg-white/25 border-white/20 text-white disabled:opacity-60"
-                    >
-                      {isSavingDraft ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                      ) : (
-                        <Save className="w-4 h-4 shrink-0" />
-                      )}
-                      <span className="hidden sm:inline">
-                        {isSavingDraft ? "Saving..." : "Save Draft"}
-                      </span>
-                      <span className="sm:hidden">
-                        {isSavingDraft ? "..." : "Save"}
-                      </span>
-                    </button>
+                  {!isProjectTools && (
+                    isReadOnly ? (
+                      <button
+                        type="button"
+                        data-readonly-trigger="true"
+                        onClick={handleToggleReadOnlyPopover}
+                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 shrink-0 whitespace-nowrap rounded-lg hp:rounded-md text-xs sm:text-sm font-medium bg-amber-400/15 hover:bg-amber-400/25 active:bg-amber-400/30 border border-amber-300/40 text-amber-200 shadow-xs backdrop-blur-sm transition-all active:scale-[0.98]"
+                        title="Read-Only Mode: Click for details"
+                      >
+                        <Lock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                        <span className="text-amber-100 font-semibold tracking-wide">Read-Only</span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 text-amber-300/80 transition-transform duration-200 shrink-0 ${
+                            showReadOnlyPopover ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isSavingDraft}
+                        onClick={handleQuickSave}
+                        className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 shrink-0 whitespace-nowrap border rounded-lg hp:rounded-md text-xs sm:text-sm font-medium transition bg-white/10 hover:bg-white/20 active:bg-white/25 border-white/20 text-white disabled:opacity-60"
+                      >
+                        {isSavingDraft ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                        ) : (
+                          <Save className="w-4 h-4 shrink-0" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {isSavingDraft ? "Saving..." : "Save Draft"}
+                        </span>
+                        <span className="sm:hidden">
+                          {isSavingDraft ? "..." : "Save"}
+                        </span>
+                      </button>
+                    )
                   )}
 
                   {/* Minimize — only offered once the header is stuck over the
@@ -1042,7 +1040,9 @@ export function HeaderCalculationPage() {
                 for navigation. */}
                   {canCollapse && (
                     <>
-                      <div className="hidden lg:block w-px h-6 bg-white/20" />
+                      {!isProjectTools && (
+                        <div className="hidden lg:block w-px h-6 bg-white/20" />
+                      )}
                       <button
                         ref={minimizeButtonRef}
                         type="button"

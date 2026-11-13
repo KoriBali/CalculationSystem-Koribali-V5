@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Helmet } from "react-helmet";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -136,7 +136,7 @@ export default function PoleFormView() {
   const location = useLocation();
   const isProjectTools = location.pathname.startsWith("/project-tools");
   // Read condition from sessionStorage
-  const condition = (() => {
+  const [condition, setConditionState] = useState(() => {
     try {
       return JSON.parse(
         sessionStorage.getItem(`${projectType}_condition`) || "{}",
@@ -144,7 +144,39 @@ export default function PoleFormView() {
     } catch {
       return {};
     }
-  })();
+  });
+
+  const updateCondition = useCallback((updates) => {
+    try {
+      const raw = sessionStorage.getItem(`${projectType}_condition`);
+      const prev = raw ? JSON.parse(raw) : {};
+      const next = { ...prev, ...updates };
+      sessionStorage.setItem(`${projectType}_condition`, JSON.stringify(next));
+      setConditionState(next);
+
+      const rawConfig = sessionStorage.getItem(`${projectType}_calculation_config`);
+      const prevConfig = rawConfig ? JSON.parse(rawConfig) : {};
+      const nextConfig = {
+        ...prevConfig,
+        pole: true,
+        opening: next.openingEnabled !== undefined ? !!next.openingEnabled : true,
+        baseplate: !!next.baseplateEnabled,
+        foundation: !!next.foundationEnabled,
+      };
+      sessionStorage.setItem(
+        `${projectType}_calculation_config`,
+        JSON.stringify(nextConfig),
+      );
+
+      if (updates.baseplateEnabled === false) {
+        sessionStorage.removeItem(`${projectType}_isCalculatedBp`);
+      }
+
+      notifyCalculationProgressChanged();
+    } catch (e) {
+      console.warn("Failed to update condition:", e);
+    }
+  }, [projectType]);
 
   const workflow = (() => {
     try {
@@ -336,6 +368,12 @@ export default function PoleFormView() {
     condition.poleType === "standard" &&
     (poleStandardForm.poleTypeStandard?.type === "taper" ||
       poleStandardForm.poleTypeStandard?.type === "tapered");
+
+  // straight pole standard mode (in development preview)
+  const isStraightStandard =
+    !isCustomMode &&
+    condition.poleType === "standard" &&
+    poleStandardForm.poleTypeStandard?.type === "straight";
 
   const maxOhw = isStandardTaper ? 4 : 8;
 
@@ -600,15 +638,7 @@ export default function PoleFormView() {
                         }
                         onUpdate={(val) => {
                           if (isReadOnly) return;
-                          if (
-                            isCalculationAndDrawing &&
-                            !condition.baseplateEnabled &&
-                            val.type === "straight"
-                          ) {
-                            setShowStraightModal(true);
-                          } else {
-                            poleStandardForm.updatePoleTypeStandard(val);
-                          }
+                          poleStandardForm.updatePoleTypeStandard(val);
                         }}
                       />
 
@@ -619,8 +649,22 @@ export default function PoleFormView() {
                           taperPoleStandard={poleStandardForm.taperPoleStandard}
                           onUpdate={poleStandardForm.updateTaperPoleStandard}
                           isBaseplate={condition.baseplateEnabled}
+                          onUpdateCondition={updateCondition}
                           errors={poleStandardForm.taperPoleErrors}
                           readOnly={isReadOnly}
+                          isCalculated={
+                            calculation.isCalculated ||
+                            Boolean(
+                              calculation.results &&
+                                calculation.results.length > 0,
+                            ) ||
+                            sessionStorage.getItem(
+                              `${projectType}_isCalculatedPole`,
+                            ) === "true" ||
+                            sessionStorage.getItem(
+                              `${projectType}_isCalculatedBp`,
+                            ) === "true"
+                          }
                         />
                       )}
 
@@ -1053,8 +1097,8 @@ export default function PoleFormView() {
             </>
           )}
 
-          {/* ── Overhead Wire (Hidden for Old JIL Standard Taper) ── */}
-          {(isCustomMode || (isStandardTaper && !isOldJil)) && (
+          {/* ── Overhead Wire ── */}
+          {(isCustomMode || isStandardTaper) && (
             <>
               <div
                 className="
@@ -1584,33 +1628,42 @@ export default function PoleFormView() {
               ) : (
                 <button
                   type="button"
-                  onClick={calculation.calculate}
-                  disabled={isShowingCalcLoading}
+                  onClick={isStraightStandard ? undefined : calculation.calculate}
+                  disabled={isShowingCalcLoading || isStraightStandard}
+                  title={
+                    isStraightStandard
+                      ? "Straight pole calculation is currently in development"
+                      : undefined
+                  }
                   className={`inline-flex justify-center items-center gap-2 min-w-[160px] px-5 py-2.5 sm:py-2 lg:py-2.5 hp:px-4 hp:py-2 md:px-6
                   rounded-lg hp:rounded-md font-medium text-sm transition-all duration-200 shadow-sm
                   ${
-                    isShowingCalcLoading
-                      ? "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white opacity-50 cursor-not-allowed"
-                      : calculation.isInputsChanged
-                        ? "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white ring-2 ring-sky-300 ring-offset-2 ring-offset-white shadow-md hover:brightness-110 active:scale-[0.98] cursor-pointer"
-                        : calculation.isCalculated
-                          ? "bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] cursor-pointer"
-                          : "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white hover:brightness-110 cursor-pointer"
+                    isStraightStandard
+                      ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
+                      : isShowingCalcLoading
+                        ? "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white opacity-50 cursor-not-allowed"
+                        : calculation.isInputsChanged
+                          ? "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white ring-2 ring-sky-300 ring-offset-2 ring-offset-white shadow-md hover:brightness-110 active:scale-[0.98] cursor-pointer"
+                          : calculation.isCalculated
+                            ? "bg-[#eef2f6] hover:bg-[#e2e8f0] text-[#0d3b66] ring-1 ring-inset ring-[#d0d7e2] hover:ring-[#b8c2d1] cursor-pointer"
+                            : "bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white hover:brightness-110 cursor-pointer"
                   }`}
                 >
                   {isShowingCalcLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : calculation.isInputsChanged ? (
+                  ) : calculation.isInputsChanged && !isStraightStandard ? (
                     <RefreshCw className="w-4 lg:w-4.5 h-4 lg:h-4.5" />
                   ) : (
                     <Calculator className="w-4 lg:w-4.5 h-4 lg:h-4.5" />
                   )}
                   <span className="hp:text-[11px] whitespace-nowrap">
-                    {isShowingCalcLoading
-                      ? "Calculating..."
-                      : calculation.isInputsChanged
-                        ? "Recalculate Results"
-                        : "Calculate Results"}
+                    {isStraightStandard
+                      ? "Calculate Results"
+                      : isShowingCalcLoading
+                        ? "Calculating..."
+                        : calculation.isInputsChanged
+                          ? "Recalculate Results"
+                          : "Calculate Results"}
                   </span>
                 </button>
               )}
@@ -1764,6 +1817,7 @@ export default function PoleFormView() {
               {/* 3. Results state with transition animation */}
               {!isShowingCalcLoading &&
                 !calculation.calculationError &&
+                !isStraightStandard &&
                 calculation.showResults && (
                   <motion.div
                     key={`results-container-${calculation.calculationKey}`}

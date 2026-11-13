@@ -147,7 +147,7 @@ export function FinishCalculationModal({ open, onClose, onSaveDraft, onSaveDatab
         <div className="bg-slate-50 px-5 py-4 sm:px-8 sm:py-5 border-t border-slate-100 flex justify-center">
           <button
             onClick={onClose}
-            className="px-8 sm:px-10 py-2 sm:py-2.5 rounded-xl font-semibold text-sm text-slate-600 border border-slate-300 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+            className="px-8 sm:px-10 py-2 sm:py-2.5 rounded-lg font-semibold text-sm text-slate-600 border border-slate-300 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
           >
             Close
           </button>

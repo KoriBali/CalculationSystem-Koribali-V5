@@ -4,7 +4,12 @@ export const STANDARD_DEFAULTS = {
   jil: { designWindSpeed: "60", designAirDensity: "1.23" },
   old_jil: { designWindSpeed: "60", designAirDensity: "1.23" },
   old_lighting_pole: { designWindSpeed: "60", designAirDensity: "1.23" },
-  new_jil: { designWindSpeed: "60", designAirDensity: "1.23" },
+  new_jil: {
+    designWindSpeed: "60",
+    designAirDensity: "1.23",
+    horizontalAcceleration: "4.71",
+    responseRatio: "1.00",
+  },
 };
 
 // Returns updated object with auto-filled values if standard has defaults

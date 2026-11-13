@@ -7,10 +7,33 @@ import {
 import { useState } from "react";
 import { BaseplateIcon } from "../../../../../assets/icon";
 import { ConfirmResetAllModal } from "../../modals/ConfirmResetAllModal";
+import { FormSelect } from "../../../../../shared/components/FormSelect";
+
+const CONDITION_STANDARD_OPTIONS = [
+  { value: "old_lighting_pole", label: "Old Lighting Pole" },
+  { value: "new_jil", label: "New JIL" },
+];
 
 /**
  * HELPER COMPONENTS & FUNCTIONS
  */
+// Returns input className based on validation state
+const inputStyle = (hasError) =>
+  `w-full pl-3 md:pl-4 py-2 lg:py-2.5 rounded-lg hp:rounded-md text-xs md:text-sm outline-none transition-all border
+  ${
+    hasError
+      ? "border-red-500 bg-[#fff5f5] ring-1 ring-red-200"
+      : "border-gray-300 bg-white focus:border-[#3399cc] focus:ring-1 focus:ring-[#3399cc]"
+  }`;
+
+// Renders a red error message below an invalid field
+const ErrorStyle = ({ show, text }) =>
+  show && typeof text === "string" ? (
+    <div className="absolute left-0 -bottom-4 md:-bottom-5 flex items-center gap-1 text-[9px] md:text-[11px] text-red-500">
+      <span>*{text}</span>
+    </div>
+  ) : null;
+
 // Reusable section title with left accent bar
 const SectionTitle = ({ children }) => (
   <h3 className="text-[#0d3b66] mb-4 flex items-center gap-1 md:gap-2 text-xs md:text-sm font-medium">
@@ -21,8 +44,40 @@ const SectionTitle = ({ children }) => (
 
 // Reusable section card wrapper
 const SectionCard = ({ children }) => (
-  <div className="bg-white px-4 md:px-5 py-5 rounded-xl hp:rounded-lg border border-gray-200">
+  <div className="bg-white px-4 md:px-5 py-5 rounded-lg sm:rounded-xl border border-gray-200">
     {children}
+  </div>
+);
+
+// Reusable number input with unit suffix
+const UnitInput = ({
+  value,
+  onChange,
+  unit,
+  unitPadding,
+  hasError,
+  className,
+  ...props
+}) => (
+  <div className="relative">
+    <input
+      type="number"
+      step="any"
+      min={0}
+      value={value}
+      onChange={onChange}
+      onWheel={(e) => e.target.blur()}
+      className={
+        className ||
+        `${inputStyle(hasError)} ${unitPadding || (unit ? "pr-10" : "pr-3 md:pr-4")}`
+      }
+      {...props}
+    />
+    {unit && (
+      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs md:text-sm text-gray-500 pointer-events-none select-none">
+        {unit}
+      </span>
+    )}
   </div>
 );
 
@@ -32,25 +87,32 @@ const SectionCard = ({ children }) => (
 export function ConditionForm({
   projectType,
   projectMode,
-  condition,
+  condition = {},
   onUpdate,
   onFinish,
-  errors,
+  errors = {},
   readOnly = false,
 }) {
   // State for reset confirmation modal
   const [showResetModal, setShowResetModal] = useState(false);
 
-  // Resets only additional components toggles, preserving request design conditions and pole type
+  // Resets condition to defaults
   const handleReset = () => {
     if (readOnly) return;
     const isStandard = condition?.poleType === "standard";
     onUpdate({
-      openingEnabled: isStandard ? true : false,
-      baseplateEnabled: isStandard ? true : false,
+      designStandard: "old_lighting_pole",
+      designWindSpeed: "60",
+      designAirDensity: "1.23",
+      horizontalAcceleration: "4.71",
+      responseRatio: "1.00",
+      openingEnabled: true,
+      baseplateEnabled: isStandard ? false : false,
       foundationEnabled: false,
     });
   };
+
+  const isNewJil = condition?.designStandard === "new_jil";
 
   return (
     <div className="relative">
@@ -72,54 +134,197 @@ export function ConditionForm({
           "
         />
 
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-
-          {/* ── Additional Component (toggles) ── */}
+        <div className="p-4 md:p-6 space-y-6">
+          {/* ── Standard and Condition ── */}
           <div>
-            <SectionTitle>Additional Components</SectionTitle>
+            <SectionTitle>Standard and Condition</SectionTitle>
             <SectionCard>
-              <div className="grid xl:grid-cols-3 gap-6">
-                {/* Opening */}
-                <ToggleCard
-                  label="Opening"
-                  icon={<DoorOpen size={16} />}
-                  enabled={condition.openingEnabled}
-                  disabled={
-                    readOnly ||
-                    (projectMode === "both" && condition.poleType === "standard")
-                  }
-                  onToggle={() =>
-                    !readOnly && onUpdate({ openingEnabled: !condition.openingEnabled })
-                  }
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6">
+                {/* Condition Standard */}
+                <div className="relative">
+                  <label className="block text-sm text-gray-700 mb-2 hp:text-xs hp:mb-1">
+                    Condition Standard{" "}
+                    <span className="text-red-500 ml-1 font-semibold">*</span>
+                  </label>
+                  <FormSelect
+                    id="designStandard"
+                    value={condition?.designStandard || "old_lighting_pole"}
+                    onChange={(val) => onUpdate({ designStandard: val })}
+                    options={CONDITION_STANDARD_OPTIONS}
+                    placeholder="Select Standard"
+                    disabled={readOnly}
+                    hasError={!!errors?.designStandard}
+                  />
+                  <ErrorStyle
+                    show={errors?.designStandard}
+                    text={errors?.designStandard}
+                  />
+                </div>
 
-                {/* Baseplate */}
-                <ToggleCard
-                  label="Baseplate"
-                  icon={<BaseplateIcon size={18} />}
-                  enabled={condition.baseplateEnabled}
-                  disabled={readOnly}
-                  onToggle={() =>
-                    !readOnly && onUpdate({ baseplateEnabled: !condition.baseplateEnabled })
-                  }
-                />
+                {/* Wind Speed */}
+                <div className="relative">
+                  <label className="block text-sm text-gray-700 mb-2 hp:text-xs hp:mb-1">
+                    Wind Speed{" "}
+                    <span className="text-red-500 ml-1 font-semibold">*</span>
+                  </label>
+                  <UnitInput
+                    id="designWindSpeed"
+                    value={condition?.designWindSpeed ?? ""}
+                    onChange={(e) =>
+                      onUpdate({ designWindSpeed: e.target.value })
+                    }
+                    unit="m/s"
+                    unitPadding="pr-12"
+                    placeholder="60"
+                    disabled={readOnly}
+                    hasError={!!errors?.designWindSpeed}
+                  />
+                  <ErrorStyle
+                    show={errors?.designWindSpeed}
+                    text={errors?.designWindSpeed}
+                  />
+                </div>
 
-                {/* Foundation */}
-                <ToggleCard
-                  label="Foundation"
-                  icon={<Layers size={16} />}
-                  enabled={condition.foundationEnabled}
-                  disabled={readOnly}
-                  onToggle={() =>
-                    !readOnly &&
-                    onUpdate({
-                      foundationEnabled: !condition.foundationEnabled,
-                    })
-                  }
-                />
+                {/* Air Density */}
+                <div className="relative">
+                  <label className="block text-sm text-gray-700 mb-2 hp:text-xs hp:mb-1">
+                    Air Density{" "}
+                    <span className="text-red-500 ml-1 font-semibold">*</span>
+                  </label>
+                  <UnitInput
+                    id="designAirDensity"
+                    value={condition?.designAirDensity ?? ""}
+                    onChange={(e) =>
+                      onUpdate({ designAirDensity: e.target.value })
+                    }
+                    unit={
+                      <span>
+                        N・sec<sup>2</sup>/m<sup>4</sup>
+                      </span>
+                    }
+                    unitPadding="pr-[92px]"
+                    placeholder="1.23"
+                    disabled={readOnly}
+                    hasError={!!errors?.designAirDensity}
+                  />
+                  <ErrorStyle
+                    show={errors?.designAirDensity}
+                    text={errors?.designAirDensity}
+                  />
+                </div>
               </div>
+
+              {/* Conditional Seismic Inputs for New JIL */}
+              {isNewJil && (
+                <div className="mt-6 pt-5 border-t border-gray-100">
+                  <p className="text-xs md:text-sm font-medium text-[#0d3b66] mb-4 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#3399cc]" />
+                    Condition for calculation of seismic
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
+                    {/* Horizontal Acceleration (EQa) */}
+                    <div className="relative">
+                      <label className="block text-sm text-gray-700 mb-2 hp:text-xs hp:mb-1">
+                        Horizontal Acceleration (EQa){" "}
+                        <span className="text-red-500 ml-1 font-semibold">*</span>
+                      </label>
+                      <UnitInput
+                        id="horizontalAcceleration"
+                        value={condition?.horizontalAcceleration ?? ""}
+                        onChange={(e) =>
+                          onUpdate({ horizontalAcceleration: e.target.value })
+                        }
+                        unit={
+                          <span>
+                            m/s<sup>2</sup>
+                          </span>
+                        }
+                        unitPadding="pr-12"
+                        placeholder="4.71"
+                        disabled={readOnly}
+                        hasError={!!errors?.horizontalAcceleration}
+                      />
+                      <ErrorStyle
+                        show={errors?.horizontalAcceleration}
+                        text={errors?.horizontalAcceleration}
+                      />
+                    </div>
+
+                    {/* Response Ratio (EQr) */}
+                    <div className="relative">
+                      <label className="block text-sm text-gray-700 mb-2 hp:text-xs hp:mb-1">
+                        Response Ratio (EQr){" "}
+                        <span className="text-red-500 ml-1 font-semibold">*</span>
+                      </label>
+                      <UnitInput
+                        id="responseRatio"
+                        value={condition?.responseRatio ?? ""}
+                        onChange={(e) =>
+                          onUpdate({ responseRatio: e.target.value })
+                        }
+                        placeholder="1.00"
+                        disabled={readOnly}
+                        hasError={!!errors?.responseRatio}
+                      />
+                      <ErrorStyle
+                        show={errors?.responseRatio}
+                        text={errors?.responseRatio}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </SectionCard>
           </div>
+
+          {/* ── Additional Component (toggles) — only for custom mode ── */}
+          {condition.poleType !== "standard" && (
+            <div>
+              <SectionTitle>Additional Components</SectionTitle>
+              <SectionCard>
+                <div className="grid xl:grid-cols-3 gap-6">
+                  {/* Opening */}
+                  <ToggleCard
+                    label="Opening"
+                    icon={<DoorOpen size={16} />}
+                    enabled={condition.openingEnabled}
+                    disabled={
+                      readOnly ||
+                      (projectMode === "both" && condition.poleType === "standard")
+                    }
+                    onToggle={() =>
+                      !readOnly && onUpdate({ openingEnabled: !condition.openingEnabled })
+                    }
+                  />
+
+                  {/* Baseplate */}
+                  <ToggleCard
+                    label="Baseplate"
+                    icon={<BaseplateIcon size={18} />}
+                    enabled={condition.baseplateEnabled}
+                    disabled={readOnly}
+                    onToggle={() =>
+                      !readOnly && onUpdate({ baseplateEnabled: !condition.baseplateEnabled })
+                    }
+                  />
+
+                  {/* Foundation */}
+                  <ToggleCard
+                    label="Foundation"
+                    icon={<Layers size={16} />}
+                    enabled={condition.foundationEnabled}
+                    disabled={readOnly}
+                    onToggle={() =>
+                      !readOnly &&
+                      onUpdate({
+                        foundationEnabled: !condition.foundationEnabled,
+                      })
+                    }
+                  />
+                </div>
+              </SectionCard>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="border-t border-gray-200" />

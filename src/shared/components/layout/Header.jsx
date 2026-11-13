@@ -101,7 +101,7 @@ export function Header({
                 <button
                   type="button"
                   onClick={onRootCrumbClick}
-                  title="Go to Requests"
+                  title={rootLabel === "Project Tools" ? "Go to Project Tools" : "Go to Requests"}
                   className="
                     hidden sm:block
                     shrink-0
@@ -148,7 +148,7 @@ export function Header({
                     <button
                       type="button"
                       onClick={onProjectCrumbClick}
-                      title={`Go to ${currentTitle.global} drafts`}
+                      title={rootLabel === "Project Tools" ? `Go to ${currentTitle.global} setup` : `Go to ${currentTitle.global} drafts`}
                       className="
                         hidden sm:block
                         max-w-[120px] lg:max-w-[200px]
@@ -179,7 +179,7 @@ export function Header({
                         <button
                           type="button"
                           onClick={onSetupCrumbClick}
-                          title="Go to case start"
+                          title={rootLabel === "Project Tools" ? `Go to ${currentTitle.stage}` : "Go to case start"}
                           className="
                             hidden sm:block
                             shrink-0

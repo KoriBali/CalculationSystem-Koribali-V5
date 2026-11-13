@@ -69,6 +69,7 @@ export function DrawingPoleForm({ pole, onUpdate, onReset, onBack, onNext, error
 
   const taperErrors = {
     poleType: errors["taperPoleStandard.poleType"],
+    installationPole: errors["taperPoleStandard.installationPole"],
     groundPosition: errors["taperPoleStandard.groundPosition"],
     height: errors["taperPoleStandard.height"],
     embedmentLength: errors["taperPoleStandard.embedmentLength"],

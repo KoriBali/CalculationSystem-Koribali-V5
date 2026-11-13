@@ -70,6 +70,7 @@ export function FourRibTypeForm({
   isCalculated,
   buttonLabel,
   readOnly = false,
+  hideNextButton = false,
 }) {
   const [showResetModal, setShowResetModal] = useState(false);
 
@@ -535,7 +536,7 @@ export function FourRibTypeForm({
               )}
 
               {/* Proceed to next step or report generation */}
-              {readOnly ? (
+              {!hideNextButton && (readOnly ? (
                 <button
                   onClick={onNext}
                   title={buttonLabel}
@@ -561,7 +562,7 @@ export function FourRibTypeForm({
                   <span className="hp:hidden">{buttonLabel}</span>
                   <ChevronRight className="w-4 md:w-5 h-4 md:h-5 hp:w-4 hp:h-4" />
                 </button>
-              )}
+              ))}
             </div>
           </div>
         </div>

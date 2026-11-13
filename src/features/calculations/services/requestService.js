@@ -556,6 +556,29 @@ export const calculateCase = async (requestId, caseId, payload) => {
 };
 
 /**
+ * Execute standalone pole calculation for Project Tools (POST /api/project-tools/calculation/pole/calculate)
+ * Body: { conditions: PoleToolConditions, input: PoleToolInput }
+ */
+export const calculateProjectToolsPole = async (payload) => {
+  const { data } = await api.post(
+    "/api/project-tools/calculation/pole/calculate",
+    payload
+  );
+  return data?.data || data;
+};
+
+/**
+ * Preview standalone pole report for Project Tools (POST /api/project-tools/calculation/pole/report)
+ */
+export const previewProjectToolsReport = async (payload) => {
+  const { data } = await api.post(
+    "/api/project-tools/calculation/pole/report",
+    payload
+  );
+  return data?.data || data;
+};
+
+/**
  * Save inputs and record official calculation run (POST CASE_PATH/runs)
  * Response:
  * - 201: { case, run: { id, status, display, ... }, runNotCreated: null }

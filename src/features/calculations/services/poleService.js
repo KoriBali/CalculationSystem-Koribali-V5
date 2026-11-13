@@ -138,6 +138,14 @@ export const calculatePole = async (payload) => {
         "No calculation results were returned from the backend engine.",
     );
   } catch (error) {
+    // If generic calculation endpoint is not yet deployed on backend (404), fall back to simulation
+    if (error?.response?.status === 404) {
+      console.warn(
+        "Backend /api/calculate returned 404, falling back to simulated calculation.",
+      );
+      return generateMockResults(payload);
+    }
+
     console.error("Backend calculation API error:", error);
     const detail =
       error?.response?.data?.detail?.message ||

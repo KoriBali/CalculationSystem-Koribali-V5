@@ -3,6 +3,7 @@ import { RotateCcw, Box, Loader2 } from "lucide-react";
 import { GROUND_POSITION_OPTIONS } from "../../../../constants/taperPoleStandradOptions";
 import { usePoleStandardData } from "../../../../hooks/usePoleStandardData";
 import { ConfirmResetAllModal } from "../../../modals/ConfirmResetAllModal";
+import { ConfirmSwitchInstallationModal } from "../../../modals/ConfirmSwitchInstallationModal";
 import { preloadImagesWhenIdle } from "../../../../utils/preloadImages";
 import { FormSelect } from "../../../../../../shared/components/FormSelect";
 import { getMasterPoleStandardHeightGeometry } from "../../../../services/requestService";
@@ -698,9 +699,11 @@ const EMPTY_HEIGHT_OPTIONS = { onGL: [], underGL: [] };
 
 const EMPTY_POLE_STANDARD = {
   poleType: "",
+  installationPole: "",
   groundPosition: "",
   height: "",
   poleStandardHeightId: null,
+  embedmentLength: "",
 };
 
 export function TaperPoleStandardForm({
@@ -708,8 +711,10 @@ export function TaperPoleStandardForm({
   onUpdate,
   hideReset = false,
   isBaseplate = true,
+  onUpdateCondition,
   errors = {},
   readOnly = false,
+  isCalculated = false,
 }) {
   const {
     poleStandardOptions,
@@ -724,17 +729,72 @@ export function TaperPoleStandardForm({
   const [loadedImages, setLoadedImages] = useState(() => new Set());
 
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
+
+  // Resolved installation method: "baseplate", "embedment", or ""
+  const effectiveInstallation =
+    taperPoleStandard.installationPole ||
+    (isBaseplate
+      ? "baseplate"
+      : taperPoleStandard.embedmentLength
+        ? "embedment"
+        : taperPoleStandard.groundPosition === "onGL"
+          ? "baseplate"
+          : "");
+
+  const effectiveIsBaseplate = effectiveInstallation === "baseplate";
+
+  const applyInstallationSwitch = (type) => {
+    if (type === "baseplate") {
+      onUpdateCondition?.({ baseplateEnabled: true });
+      onUpdate({
+        installationPole: "baseplate",
+        groundPosition:
+          taperPoleStandard.groundPosition === "underGL"
+            ? ""
+            : taperPoleStandard.groundPosition || "",
+        embedmentLength: "",
+      });
+    } else if (type === "embedment") {
+      onUpdateCondition?.({ baseplateEnabled: false });
+      setBeGeometry(null);
+      onUpdate({
+        installationPole: "embedment",
+        groundPosition: "underGL",
+        height: "",
+        poleStandardHeightId: null,
+      });
+    }
+  };
+
+  const handleSelectInstallation = (type) => {
+    if (readOnly) return;
+    if (effectiveInstallation === type) return;
+
+    // Protection scenario: If calculation has already been done and user switches
+    // from Baseplate to Embedment, show confirmation modal before proceeding.
+    if (
+      effectiveInstallation === "baseplate" &&
+      type === "embedment" &&
+      isCalculated
+    ) {
+      setShowSwitchModal(true);
+      return;
+    }
+
+    applyInstallationSwitch(type);
+  };
 
   useEffect(() => {
     if (
-      !isBaseplate &&
+      effectiveInstallation === "embedment" &&
       taperPoleStandard.poleType &&
       taperPoleStandard.groundPosition !== "underGL"
     ) {
-      onUpdate({ groundPosition: "underGL", height: "" });
+      onUpdate({ groundPosition: "underGL" });
     }
   }, [
-    isBaseplate,
+    effectiveInstallation,
     taperPoleStandard.poleType,
     taperPoleStandard.groundPosition,
     onUpdate,
@@ -751,7 +811,7 @@ export function TaperPoleStandardForm({
   // The height list itself should stay the plain onGL values; the +0.3m
   // embedment allowance is entered separately via Embedment Length, not
   // baked into the dropdown.
-  const heightLookupKey = !isBaseplate
+  const heightLookupKey = !effectiveIsBaseplate
     ? "onGL"
     : taperPoleStandard.groundPosition;
 
@@ -869,29 +929,31 @@ export function TaperPoleStandardForm({
       : null;
 
   const currentImage =
-    taperPoleStandard.poleType && taperPoleStandard.groundPosition
-      ? !isBaseplate && taperPoleStandard.groundPosition === "underGL"
+    taperPoleStandard.poleType
+      ? effectiveInstallation === "embedment"
         ? EMBED_IMAGE_MAP[taperPoleStandard.poleType]
-        : (DIAGRAM_IMAGE_MAP[taperPoleStandard.poleType]?.[
+        : effectiveInstallation === "baseplate" && taperPoleStandard.groundPosition
+          ? (DIAGRAM_IMAGE_MAP[taperPoleStandard.poleType]?.[
             taperPoleStandard.groundPosition
           ] ?? null)
+          : null
       : null;
 
   // Dimension texts drawn over the diagram (plain On/Under GL diagrams only,
   // not the Embedment variant). Prioritizes Backend geometry when available.
-  const diagramLabels = isBaseplate
+  const diagramLabels = effectiveIsBaseplate
     ? getDiagramLabels(
-        taperPoleStandard.poleType,
-        taperPoleStandard.groundPosition,
-        taperPoleStandard.height,
-        effectiveBeGeometry,
-      )
+      taperPoleStandard.poleType,
+      taperPoleStandard.groundPosition,
+      taperPoleStandard.height,
+      effectiveBeGeometry,
+    )
     : getDiagramLabels(
-        taperPoleStandard.poleType,
-        "embedment",
-        taperPoleStandard.height,
-        effectiveBeGeometry,
-      );
+      taperPoleStandard.poleType,
+      "embedment",
+      taperPoleStandard.height,
+      effectiveBeGeometry,
+    );
 
   // ── Highlight labels whose value just changed ──
   // When the Height changes, briefly flash only the labels that now read
@@ -920,10 +982,10 @@ export function TaperPoleStandardForm({
     setFlashingLabels(
       isSameDiagram
         ? Object.keys(labelTexts).filter(
-            (key) =>
-              prevLabels.texts[key] !== undefined &&
-              prevLabels.texts[key] !== labelTexts[key],
-          )
+          (key) =>
+            prevLabels.texts[key] !== undefined &&
+            prevLabels.texts[key] !== labelTexts[key],
+        )
         : [],
     );
     setPrevLabels({
@@ -943,13 +1005,12 @@ export function TaperPoleStandardForm({
     }
   }, [flashingLabels]);
 
-  const diagramLayout = isBaseplate
+  const diagramLayout = effectiveIsBaseplate
     ? DIAGRAM_LABEL_LAYOUT[
-        `${taperPoleStandard.poleType}.${taperPoleStandard.groundPosition}`
-      ]
+    `${taperPoleStandard.poleType}.${taperPoleStandard.groundPosition}`
+    ]
     : DIAGRAM_LABEL_LAYOUT[`${taperPoleStandard.poleType}.embedment`];
 
-  const isGroundDisabled = !taperPoleStandard.poleType;
   const showDiagram = !!currentImage;
   const isImageLoaded = currentImage ? loadedImages.has(currentImage) : false;
 
@@ -983,10 +1044,6 @@ export function TaperPoleStandardForm({
     </>
   );
 
-  const activeGroundOptions = isBaseplate
-    ? GROUND_POSITION_OPTIONS
-    : [{ id: "underGL", label: "Embedment" }];
-
   return (
     <div className="bg-white px-4 md:px-6 pb-6 rounded-b-2xl hp:rounded-b-xl">
       {/* ── Section title ── */}
@@ -995,13 +1052,15 @@ export function TaperPoleStandardForm({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 hp:gap-3">
-        {/* ── LEFT: Pole Type ── */}
+        {/* ── LEFT: Configuration Card ── */}
         <div
           id="taperPoleStandard.poleType"
-          className={`border rounded-xl hp:rounded-lg bg-white shadow-sm overflow-hidden flex flex-col ${
-            errors.poleType ? "border-red-300" : "border-slate-200"
-          }`}
+          className={`border rounded-xl hp:rounded-lg bg-white shadow-sm overflow-hidden flex flex-col h-full ${errors.poleType || errors.installationPole || errors.groundPosition
+            ? "border-red-300"
+            : "border-slate-200"
+            }`}
         >
+          {/* Section 1: Pole Standard Type */}
           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex-shrink-0">
             <p className="text-xs md:text-sm font-medium text-slate-500">
               Select Pole Standard Type{" "}
@@ -1009,9 +1068,9 @@ export function TaperPoleStandardForm({
             </p>
           </div>
 
-          <div className="p-4 grid grid-cols-2 gap-4 flex-1 md:flex md:flex-col">
+          <div className="p-4 pb-7 sm:pb-8 flex flex-col gap-2">
             {poleStandardLoading && poleStandardOptions.length === 0 ? (
-              <div className="col-span-2 md:col-span-1 grid grid-cols-2 gap-3 md:flex md:flex-col">
+              <div className="flex flex-col gap-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
@@ -1025,7 +1084,7 @@ export function TaperPoleStandardForm({
             ) : !poleStandardLoading &&
               poleStandardError &&
               poleStandardOptions.length === 0 ? (
-              <div className="col-span-2 md:col-span-1 flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+              <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
                 <p className="text-xs sm:text-sm text-red-600">
                   Failed to load pole standard options.
                 </p>
@@ -1048,7 +1107,8 @@ export function TaperPoleStandardForm({
                     onClick={() => {
                       if (readOnly) return;
                       if (taperPoleStandard.poleType === option.id) return;
-                      const nextGround = !isBaseplate ? "underGL" : "";
+                      const nextGround =
+                        effectiveInstallation === "embedment" ? "underGL" : "";
                       setBeGeometry(null);
                       onUpdate({
                         poleType: option.id,
@@ -1059,13 +1119,12 @@ export function TaperPoleStandardForm({
                     }}
                     className={`w-full rounded-lg hp:rounded-md border px-4 py-2 lg:py-2.5 text-xs md:text-sm font-medium transition-all text-left
                   ${readOnly ? "cursor-default" : "cursor-pointer"}
-                  ${
-                    isActive
-                      ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm"
-                      : readOnly
-                        ? "border-slate-100 text-slate-400 bg-slate-50/50"
-                        : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                  ${isActive
+                        ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm"
+                        : readOnly
+                          ? "border-slate-100 text-slate-400 bg-slate-50/50"
+                          : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
                   >
                     {option.label}
                   </button>
@@ -1074,41 +1133,90 @@ export function TaperPoleStandardForm({
             )}
           </div>
           {errors.poleType && (
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-4 -mt-4">
               <ErrorStyle show={errors.poleType} text={errors.poleType} />
             </div>
           )}
-        </div>
 
-        {/* ── RIGHT: Ground Position + Diagram ── */}
-        <div
-          className={`border rounded-xl hp:rounded-lg bg-white shadow-sm overflow-hidden flex flex-col ${
-            errors.groundPosition ? "border-red-300" : "border-slate-200"
-          }`}
-        >
-          {/* ── Ground position header ── */}
-          <div
-            id="taperPoleStandard.groundPosition"
-            className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex flex-col xl:flex-row items-start xl:items-center gap-3 xl:gap-4 flex-shrink-0"
-          >
-            <p className="text-xs md:text-sm font-medium text-slate-500 flex-shrink-0">
-              Select Ground Position{" "}
+          {/* Section 2: Select Installation Pole */}
+          <div className="px-4 py-3 border-y border-slate-100 bg-slate-50 flex-shrink-0">
+            <p className="text-xs md:text-sm font-medium text-slate-500">
+              Select Installation Pole{" "}
               <span className="text-red-500 ml-1 font-semibold">*</span>
             </p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <div className="flex items-center gap-2">
-                {activeGroundOptions.map((option) => {
+          <div
+            id="taperPoleStandard.installationPole"
+            className="p-4 pb-7 sm:pb-8 flex flex-col gap-2"
+          >
+            {[
+              { id: "baseplate", label: "Baseplate" },
+              { id: "embedment", label: "Embedment" },
+            ].map((option) => {
+              const isActive = effectiveInstallation === option.id;
+              const isDisabled = !taperPoleStandard.poleType || readOnly;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => handleSelectInstallation(option.id)}
+                  className={`w-full rounded-lg hp:rounded-md border px-4 py-2 lg:py-2.5 text-xs md:text-sm font-medium transition-all text-left
+                    ${readOnly || isDisabled ? "cursor-default" : "cursor-pointer"}
+                    ${isDisabled
+                      ? "bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
+                      : isActive
+                        ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm"
+                        : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+            {!taperPoleStandard.poleType && (
+              <p className="text-[12px] md:text-[13px] text-slate-400 italic pt-0.5">
+                Select a pole standard type first
+              </p>
+            )}
+            {errors.installationPole && (
+              <div className="pt-1">
+                <ErrorStyle
+                  show={errors.installationPole}
+                  text={errors.installationPole}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Select Ground Position (Only visible when Baseplate is selected) */}
+          {effectiveInstallation === "baseplate" && (
+            <div className="flex flex-col">
+              <div className="px-4 py-3 border-y border-slate-100 bg-slate-50 flex-shrink-0">
+                <p className="text-xs md:text-sm font-medium text-slate-500">
+                  Select Ground Position{" "}
+                  <span className="text-red-500 ml-1 font-semibold">*</span>
+                </p>
+              </div>
+
+              <div
+                id="taperPoleStandard.groundPosition"
+                className="p-4 pb-7 sm:pb-8 flex flex-col gap-2 transition-all duration-200"
+              >
+                {GROUND_POSITION_OPTIONS.map((option) => {
                   const isActive =
                     taperPoleStandard.groundPosition === option.id;
+                  const isDisabled = !taperPoleStandard.poleType || readOnly;
 
                   return (
                     <button
                       key={option.id}
                       type="button"
-                      disabled={isGroundDisabled || readOnly}
+                      disabled={isDisabled}
                       onClick={() => {
-                        if (isGroundDisabled || readOnly) return;
+                        if (isDisabled) return;
                         if (taperPoleStandard.groundPosition === option.id)
                           return;
                         setBeGeometry(null);
@@ -1118,53 +1226,59 @@ export function TaperPoleStandardForm({
                           poleStandardHeightId: null,
                         });
                       }}
-                      className={`
-                      flex items-center gap-2
-                      rounded-lg hp:rounded-md border px-4 py-2 lg:py-2.5 text-xs md:text-sm font-medium
-                      transition-all duration-150 select-none
-                      ${
-                        isGroundDisabled || (readOnly && !isActive)
+                      className={`w-full rounded-lg hp:rounded-md border px-4 py-2 lg:py-2.5 text-xs md:text-sm font-medium transition-all text-left
+                        ${readOnly || isDisabled ? "cursor-default" : "cursor-pointer"}
+                        ${isDisabled
                           ? "bg-slate-100/70 text-slate-400 border-slate-200 cursor-not-allowed opacity-60"
                           : isActive
-                            ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm cursor-default"
-                            : "border-slate-200 text-slate-700 cursor-pointer hover:border-slate-300 hover:bg-slate-100"
-                      }
-                    `}
+                            ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm"
+                            : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
                     >
-                      {/* Radio circle */}
-                      <span
-                        className={`
-                        w-3.5 h-3.5 rounded-full border-2 flex-shrink-0
-                        flex items-center justify-center transition-colors
-                        ${
-                          isGroundDisabled
-                            ? "border-slate-300"
-                            : isActive
-                              ? "border-blue-500"
-                              : "border-slate-400"
-                        }
-                      `}
-                      >
-                        {isActive && !isGroundDisabled && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        )}
-                      </span>
                       {option.label}
                     </button>
                   );
                 })}
+                {errors.groundPosition && (
+                  <div className="pt-1">
+                    <ErrorStyle
+                      show={errors.groundPosition}
+                      text={errors.groundPosition}
+                    />
+                  </div>
+                )}
               </div>
-
-              {isGroundDisabled && (
-                <span className="text-xs xl:text-sm text-slate-400 italic">
-                  Select a pole standard first
-                </span>
-              )}
-              <ErrorStyle
-                show={errors.groundPosition}
-                text={errors.groundPosition}
-              />
             </div>
+          )}
+        </div>
+
+        {/* ── RIGHT: Diagram & Dimensions ── */}
+        <div
+          className="border rounded-xl hp:rounded-lg bg-white shadow-sm overflow-hidden flex flex-col border-slate-200 h-full"
+        >
+          {/* ── Diagram header ── */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-shrink-0 min-h-[49px]">
+            <p className="text-xs md:text-sm font-medium text-slate-600">
+              Pole Diagram & Dimensions
+            </p>
+
+            {taperPoleStandard.poleType && (
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] md:text-sm font-medium px-2.5 py-1 rounded bg-blue-100 text-[#1d4ed8]">
+                  Type: {taperPoleStandard.poleType}
+                </span>
+                {effectiveInstallation === "baseplate" && taperPoleStandard.groundPosition && (
+                  <span className="text-[12px] md:text-sm font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    {taperPoleStandard.groundPosition === "onGL" ? "On GL" : "Under GL"}
+                  </span>
+                )}
+                {effectiveInstallation === "embedment" && (
+                  <span className="text-[12px] md:text-sm font-medium px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Embedment
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Diagram area ──
@@ -1204,11 +1318,10 @@ export function TaperPoleStandardForm({
                     ([container-type:size]), supaya wrapper gambar di dalamnya
                     bisa dihitung murni dengan CSS pakai cqw / cqh. */}
                 <div
-                  className={`relative flex items-center h-full ${
-                    diagramLayout
-                      ? "flex-1 min-w-0 justify-start xl:justify-center ml-[120px] sm:ml-[150px] xl:ml-[160px] [container-type:size]"
-                      : "justify-center min-w-[80px] xl:flex-shrink-0"
-                  }`}
+                  className={`relative flex items-center h-full ${diagramLayout
+                    ? "flex-1 min-w-0 justify-start xl:justify-center ml-[120px] sm:ml-[150px] xl:ml-[160px] [container-type:size]"
+                    : "justify-center min-w-[80px] xl:flex-shrink-0"
+                    }`}
                 >
                   {/* Wrapper sized exactly to the rendered image, so the
                       %-positioned labels line up with the SVG's own
@@ -1226,10 +1339,10 @@ export function TaperPoleStandardForm({
                     style={
                       diagramLayout
                         ? {
-                            width: `min(100cqw, calc(100cqh * ${diagramLayout.viewBox.width} / ${diagramLayout.viewBox.height}))`,
-                            aspectRatio: `${diagramLayout.viewBox.width} / ${diagramLayout.viewBox.height}`,
-                            flexShrink: 0,
-                          }
+                          width: `min(100cqw, calc(100cqh * ${diagramLayout.viewBox.width} / ${diagramLayout.viewBox.height}))`,
+                          aspectRatio: `${diagramLayout.viewBox.width} / ${diagramLayout.viewBox.height}`,
+                          flexShrink: 0,
+                        }
                         : undefined
                     }
                   >
@@ -1254,11 +1367,10 @@ export function TaperPoleStandardForm({
                           // Shift the select left by its own width plus the gap, and centre it
                           // vertically on the dimension line. Kept inline (not Tailwind
                           // translate classes) so the per-layout gap can be applied.
-                          transform: `translate(calc(-100% - ${
-                            diagramLayout.heightGap ?? DEFAULT_HEIGHT_GAP_PX
-                          }px), -50%)`,
+                          transform: `translate(calc(-100% - ${diagramLayout.heightGap ?? DEFAULT_HEIGHT_GAP_PX
+                            }px), -50%)`,
                         }}
-                        className={`absolute z-10 w-[120px] sm:w-[150px] xl:w-[160px] ${!isBaseplate && ["IS", "IA"].includes(taperPoleStandard.poleType) ? "top-[42%]" : "top-1/2"}`}
+                        className={`absolute z-10 w-[120px] sm:w-[150px] xl:w-[160px] ${!effectiveIsBaseplate && ["IS", "IA"].includes(taperPoleStandard.poleType) ? "top-[42%]" : "top-1/2"}`}
                       >
                         {heightField}
                       </div>
@@ -1272,25 +1384,22 @@ export function TaperPoleStandardForm({
                           new Set(prev).add(currentImage),
                         )
                       }
-                      className={`${
-                        diagramLayout
-                          ? "absolute inset-0 w-full h-full"
-                          : "w-auto h-auto max-w-full max-h-full"
-                      } object-contain transition-opacity duration-300 ${
-                        isImageLoaded ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`${diagramLayout
+                        ? "absolute inset-0 w-full h-full"
+                        : "w-auto h-auto max-w-full max-h-full"
+                        } object-contain transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"
+                        }`}
                     />
 
                     {/* Embedment Length input pinned against the bottom vertical line */}
-                    {!isBaseplate &&
+                    {!effectiveIsBaseplate &&
                       diagramLayout &&
-                      taperPoleStandard.groundPosition === "underGL" && (
+                      effectiveInstallation === "embedment" && (
                         <div
                           style={{
                             left: `${(diagramLayout.heightLineX / diagramLayout.viewBox.width) * 100}%`,
-                            transform: `translate(calc(-100% - ${
-                              diagramLayout.heightGap ?? DEFAULT_HEIGHT_GAP_PX
-                            }px), -50%)`,
+                            transform: `translate(calc(-100% - ${diagramLayout.heightGap ?? DEFAULT_HEIGHT_GAP_PX
+                              }px), -50%)`,
                           }}
                           className={`absolute z-10 w-[120px] sm:w-[150px] xl:w-[160px] ${["IS", "IA"].includes(taperPoleStandard.poleType) ? "bottom-[5%]" : "bottom-[2%]"}`}
                         >
@@ -1310,11 +1419,10 @@ export function TaperPoleStandardForm({
                                 onUpdate({ embedmentLength: e.target.value })
                               }
                               onWheel={(e) => e.target.blur()}
-                              className={`w-full px-2 py-1.5 md:py-2 lg:py-2.5 border rounded-lg hp:rounded-md text-xs md:text-sm outline-none transition-all pr-8 md:pr-10 min-h-[34px] sm:min-h-[38px] lg:min-h-[42px] bg-white ${
-                                errors.embedmentLength
-                                  ? "border-red-500 bg-[#fff5f5] ring-1 ring-red-200"
-                                  : "border-gray-300 focus:border-[#1D4ED8]"
-                              }`}
+                              className={`w-full px-2 py-1.5 md:py-2 lg:py-2.5 border rounded-lg hp:rounded-md text-xs md:text-sm outline-none transition-all pr-8 md:pr-10 min-h-[34px] sm:min-h-[38px] lg:min-h-[42px] bg-white ${errors.embedmentLength
+                                ? "border-red-500 bg-[#fff5f5] ring-1 ring-red-200"
+                                : "border-gray-300 focus:border-[#1D4ED8]"
+                                }`}
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs md:text-sm pointer-events-none">
                               mm
@@ -1338,16 +1446,14 @@ export function TaperPoleStandardForm({
                           <div
                             key={`${label.key}:${label.lines.join("|")}`}
                             style={label.style}
-                            className={`absolute pointer-events-none whitespace-nowrap text-xs md:text-sm [--label-lh:15px] md:[--label-lh:18px] leading-[var(--label-lh)] text-[#1d4ed8] ${
-                              label.isCentered ? "text-center" : ""
-                            } ${isFlashing ? "z-20" : "z-10"}`}
+                            className={`absolute pointer-events-none whitespace-nowrap text-xs md:text-sm [--label-lh:15px] md:[--label-lh:18px] leading-[var(--label-lh)] text-[#1d4ed8] ${label.isCentered ? "text-center" : ""
+                              } ${isFlashing ? "z-20" : "z-10"}`}
                           >
                             <div
-                              className={`transition-all duration-300 rounded-xs inline-block origin-center ${
-                                isFlashing
-                                  ? "animate-[spec-pop_0.85s_cubic-bezier(0.16,1,0.3,1)] font-semibold motion-reduce:animate-none"
-                                  : ""
-                              }`}
+                              className={`transition-all duration-300 rounded-xs inline-block origin-center ${isFlashing
+                                ? "animate-[spec-pop_0.85s_cubic-bezier(0.16,1,0.3,1)] font-semibold motion-reduce:animate-none"
+                                : ""
+                                }`}
                             >
                               {label.isLeader ? (
                                 <>
@@ -1376,14 +1482,18 @@ export function TaperPoleStandardForm({
                   <Box className="w-6 h-6 text-gray-400" />
                 </div>
                 <p className="text-sm md:text-base font-medium text-slate-500">
-                  {isGroundDisabled
+                  {!taperPoleStandard.poleType
                     ? "No pole standard selected"
-                    : "No ground position selected"}
+                    : !effectiveInstallation
+                      ? "No installation pole selected"
+                      : "No ground position selected"}
                 </p>
-                <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-[300px]">
-                  {isGroundDisabled
-                    ? "Select a standard type to continue. Ground position and pole dimensions will become available."
-                    : "Choose a ground position to view the pole diagram and fill in the height of structure."}
+                <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-[320px]">
+                  {!taperPoleStandard.poleType
+                    ? "Select a standard type to continue. Installation options and pole dimensions will become available."
+                    : !effectiveInstallation
+                      ? "Select an installation method (Baseplate or Embedment) to view the pole diagram."
+                      : "Choose a ground position to view the pole diagram and fill in the height of structure."}
                 </p>
               </div>
             )}
@@ -1411,10 +1521,21 @@ export function TaperPoleStandardForm({
         onClose={() => setShowResetModal(false)}
         onReset={() => {
           setBeGeometry(null);
+          onUpdateCondition?.({ baseplateEnabled: false });
           onUpdate(EMPTY_POLE_STANDARD);
         }}
         title="Reset all inputs on this section?"
         description="This will clear all inputs entered in this section. This action cannot be undone."
+      />
+
+      <ConfirmSwitchInstallationModal
+        open={showSwitchModal}
+        onClose={() => setShowSwitchModal(false)}
+        onConfirm={() => applyInstallationSwitch("embedment")}
+        title="Calculation Notice"
+        description="Changing installation to Embedment will disable Baseplate calculation and require recalculating pole results. Do you want to continue?"
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
       />
     </div>
   );

@@ -33,11 +33,11 @@ export default function NewJilReportContent({
           <div className="page-content page-content-border cover-border">
             {/* Header cover: management mark & calculation number */}
             <div className="flex justify-between">
-              <p className="cover-row-1 ml-[10px] tracking-[0.1em]">
+              <p className="cover-row-1 ml-[10px] tracking-[0.1em] min-w-[200px]">
                 <span className="jp">管理記号 : </span>
                 <span>{formatManagementCode(cover?.managementCode)}</span>
               </p>
-              <div className="cover-row-1 mr-[10px] flex justify-center items-center">
+              <div className="cover-row-1 mr-[10px] flex justify-center items-center min-w-[200px]">
                 <span className="tracking-[0.1em] jp">計算書番号 : </span>
                 <span>{formatCalculationNumber(cover?.calculationNumber)}</span>
               </div>
@@ -51,24 +51,24 @@ export default function NewJilReportContent({
 
             {/* Project information block */}
             <div className="cover-double-line">
-              <p className="cover-inner-text cover-inner-text-line text-center py-[7px] jp">
-                {cover?.projectName || cover?.title1 || ""}
+              <p className="cover-inner-text cover-inner-text-line text-center py-[7px] min-h-[36px] jp">
+                {cover?.projectName || cover?.title1 || <>&nbsp;</>}
               </p>
               <p
-                className={`cover-inner-text cover-inner-text-line text-center jp ${
+                className={`cover-inner-text cover-inner-text-line text-center jp min-h-[36px] ${
                   !(cover?.coverTopText || cover?.title2)
                     ? "py-[19px]"
                     : "py-[7px]"
                 }`}
               >
-                {cover?.coverTopText || cover?.title2 || ""}
+                {cover?.coverTopText || cover?.title2 || <>&nbsp;</>}
               </p>
               <p
-                className={`cover-inner-text text-center jp py-[7px] ${
+                className={`cover-inner-text text-center jp py-[7px] min-h-[36px] ${
                   !(cover?.coverBottomText || cover?.title3) ? "mb-[24px]" : ""
                 }`}
               >
-                {cover?.coverBottomText || cover?.title3 || ""}
+                {cover?.coverBottomText || cover?.title3 || <>&nbsp;</>}
               </p>
             </div>
 
@@ -244,12 +244,18 @@ export default function NewJilReportContent({
                   </span>
                 </div>
                 <div className="ml-[22px]">
-                  <span className="jp">水平加速度 :</span> EQa = 4.71
+                  <span className="jp">水平加速度 :</span> EQa ={" "}
+                  {condition?.horizontalAcceleration
+                    ? Number(condition.horizontalAcceleration).toFixed(2)
+                    : "4.71"}
                   <span className="jp">(</span>m/s<sup>2</sup>
                   <span className="jp">)</span>
                 </div>
                 <div className="ml-[22px]">
-                  <span className="jp">応答倍率 :</span> EQr = 1.00
+                  <span className="jp">応答倍率 :</span> EQr ={" "}
+                  {condition?.responseRatio
+                    ? Number(condition.responseRatio).toFixed(2)
+                    : "1.00"}
                 </div>
                 <div className="ml-[36px] mt-[16px] flex items-center justify-start gap-14">
                   <span>

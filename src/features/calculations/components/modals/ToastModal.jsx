@@ -112,7 +112,7 @@ export const ToastModal = ({
                 <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-end">
                   <button
                     onClick={onClose}
-                    className="w-full sm:w-auto min-w-[96px] px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs active:scale-98 bg-[#0d3b66] text-white hover:bg-[#0a2e50] cursor-pointer"
+                    className="w-full sm:w-auto min-w-[96px] px-6 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-xs active:scale-98 bg-[#0d3b66] text-white hover:bg-[#0a2e50] cursor-pointer"
                   >
                     OK
                   </button>

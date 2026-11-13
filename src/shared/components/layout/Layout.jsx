@@ -104,27 +104,39 @@ export default function Layout() {
     const typeSlug = projectToolsMatch[1];
     const subStep = projectToolsMatch[2] || "setup";
     const formattedType = formatProjectType(typeSlug);
-    const stepLabelMap = {
-      setup: "Setup",
-      initial: "Initial",
-      pole: "Pole",
-      opening: "Opening",
-      baseplate: "Baseplate",
-      foundation: "Foundation",
-      report: "Report",
-      "drawing/drawing-setup": "Drawing Setup",
-      "drawing/pole": "Pole",
-      "drawing/opening": "Opening",
-      "drawing/baseplate": "Baseplate",
-      "drawing/foundation": "Foundation",
-      "drawing/coupling": "Coupling",
-      "drawing/surface": "Surface",
-    };
-    currentTitle = {
-      global: formattedType || "Lighting Project",
-      stage: stepLabelMap[subStep] || (subStep.charAt(0).toUpperCase() + subStep.slice(1)),
-      substage: null,
-    };
+    const isDrawing = subStep.startsWith("drawing");
+
+    if (subStep === "setup") {
+      currentTitle = {
+        global: formattedType || "Lighting Project",
+        stage: "Setup",
+        substage: null,
+      };
+    } else {
+      const stepLabelMap = {
+        initial: "Initial",
+        pole: "Pole",
+        opening: "Opening",
+        baseplate: "Baseplate",
+        foundation: "Foundation",
+        report: "Report",
+        "drawing/drawing-setup": "Drawing Setup",
+        "drawing/pole": "Pole",
+        "drawing/opening": "Opening",
+        "drawing/baseplate": "Baseplate",
+        "drawing/foundation": "Foundation",
+        "drawing/coupling": "Coupling",
+        "drawing/surface": "Surface",
+      };
+
+      currentTitle = {
+        global: formattedType || "Lighting Project",
+        stage: isDrawing ? "Drawing" : "Calculations",
+        substage:
+          stepLabelMap[subStep] ||
+          (subStep.charAt(0).toUpperCase() + subStep.slice(1)),
+      };
+    }
   } else if (requestDetailId) {
     const request = getRequest(requestDetailId);
     currentTitle = {
@@ -287,6 +299,16 @@ export default function Layout() {
   const handleSetupCrumbClick = () => {
     if (isNewRequest) {
       leaveNewRequest("/projects/new");
+      return;
+    }
+    if (isProjectTools && projectToolsMatch) {
+      const typeSlug = projectToolsMatch[1];
+      const isDrawing = (projectToolsMatch[2] || "").startsWith("drawing");
+      navigate(
+        isDrawing
+          ? `/project-tools/${typeSlug}/drawing/drawing-setup`
+          : `/project-tools/${typeSlug}/initial`
+      );
       return;
     }
     const parts = location.pathname.split("/").filter(Boolean);
@@ -479,7 +501,13 @@ export default function Layout() {
           }
           onProjectCrumbClick={
             isProjectTools
-              ? () => navigate("/project-tools")
+              ? () => {
+                  if (projectToolsMatch) {
+                    navigate(`/project-tools/${projectToolsMatch[1]}/setup`);
+                  } else {
+                    navigate("/project-tools");
+                  }
+                }
               : handleProjectCrumbClick
           }
           onSetupCrumbClick={handleSetupCrumbClick}

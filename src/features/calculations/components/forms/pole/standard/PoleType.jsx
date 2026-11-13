@@ -49,9 +49,9 @@ export function PoleTypeSelector({ poleTypeStandard, onUpdate, readOnly = false 
                         : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
                   <div
-                    className={`p-1.5 rounded-md ${isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"}`}
+                    className={`p-1.5 rounded-md shrink-0 ${isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"}`}
                   >
                     <Icon size={16} />
                   </div>
@@ -60,6 +60,11 @@ export function PoleTypeSelector({ poleTypeStandard, onUpdate, readOnly = false 
                   >
                     {option.label}
                   </p>
+                  {option.id === "straight" && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0">
+                      In Development
+                    </span>
+                  )}
                 </div>
                 <div className="shrink-0 ml-2 flex items-center">
                   {isActive ? (

@@ -24,6 +24,8 @@ import { useState } from "react";
 import { activeDraftRequestPath, submitCaseForCheck } from "../../../utils/requestCases";
 import { useReadOnly } from "../../../contexts/ReadOnlyContext";
 import { getUser } from "../../../../../utils/auth";
+import { NextStepFoundationCard } from "../common/NextStepFoundationCard";
+import { notifyCalculationProgressChanged } from "../../../utils/calculationProgressEvent";
 
 // Main view for the opening calculation step
 export default function OpeningFormView() {
@@ -35,6 +37,20 @@ export default function OpeningFormView() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
   const [showCoverModal, setShowCoverModal] = useState(false);
+
+  // Read condition to know if standard mode and whether baseplate is enabled
+  const condition = (() => {
+    try {
+      return JSON.parse(
+        sessionStorage.getItem(`${projectType}_condition`) || "{}"
+      );
+    } catch {
+      return {};
+    }
+  })();
+
+  const isStandard = condition?.poleType === "standard";
+  const isFinalStepInStandard = isStandard && !condition?.baseplateEnabled;
 
   // ── Hooks ──
   const opening = useOpeningForm();
@@ -60,6 +76,10 @@ export default function OpeningFormView() {
     }
     const result = opening.finish();
     if (result === "OPEN_COVER") {
+      if (isProjectTools) {
+        handleGenerateReportClick();
+        return;
+      }
       setShowFinishModal(true);
     }
   };
@@ -76,8 +96,15 @@ export default function OpeningFormView() {
     }
   };
 
-  const handleGenerateReportClick = () => {
+  const handleGenerateReportClick = async () => {
     setShowFinishModal(false);
+    if (isProjectTools) {
+      await report.makeReport({
+        isCalculated: opening.isCalculated,
+        showToast: opening.showToast,
+      });
+      return;
+    }
     if (draftId) {
       saveWorkingSessionToDraft(projectType, draftId);
     }
@@ -190,9 +217,10 @@ export default function OpeningFormView() {
                       onBack={opening.goBack}
                       onNext={handleNextStep}
                       isCalculated={opening.isCalculated}
-                      buttonLabel={opening.buttonLabel}
+                      buttonLabel={isProjectTools && opening.isLast ? "Generate Report" : opening.buttonLabel}
                       isCalculationAndDrawing={opening.isCalculationAndDrawing}
                       readOnly={isReadOnly}
+                      hideNextButton={isFinalStepInStandard}
                     />
                   )}
 
@@ -206,14 +234,62 @@ export default function OpeningFormView() {
                       onBack={opening.goBack}
                       onNext={handleNextStep}
                       isCalculated={opening.isCalculated}
-                      buttonLabel={opening.buttonLabel}
+                      buttonLabel={isProjectTools && opening.isLast ? "Generate Report" : opening.buttonLabel}
                       isCalculationAndDrawing={opening.isCalculationAndDrawing}
                       readOnly={isReadOnly}
+                      hideNextButton={isFinalStepInStandard}
                     />
                   )}
                 </div>
               </div>
             </div>
+
+            {/* ── Next Step Card (When Opening is the last tab in Standard Embedment mode) ── */}
+            {isFinalStepInStandard && (
+              <NextStepFoundationCard
+                parentType="opening"
+                projectType={projectType}
+                isCalculated={opening.isCalculated}
+                isReadOnly={isReadOnly}
+                initialOption={condition?.foundationEnabled ? "foundation" : null}
+                onProceedToFoundation={() => {
+                  sessionStorage.setItem(`${projectType}_foundation_step_choice`, "foundation");
+                  const raw = sessionStorage.getItem(`${projectType}_condition`);
+                  const prev = raw ? JSON.parse(raw) : {};
+                  const next = { ...prev, foundationEnabled: true };
+                  sessionStorage.setItem(`${projectType}_condition`, JSON.stringify(next));
+
+                  const rawConfig = sessionStorage.getItem(`${projectType}_calculation_config`);
+                  const prevConfig = rawConfig ? JSON.parse(rawConfig) : {};
+                  sessionStorage.setItem(
+                    `${projectType}_calculation_config`,
+                    JSON.stringify({ ...prevConfig, foundation: true })
+                  );
+                  notifyCalculationProgressChanged();
+                  navigate(
+                    isProjectTools
+                      ? `/project-tools/${projectType}/foundation`
+                      : `/projects/${projectType}/${draftId}/foundation`
+                  );
+                }}
+                onFinishWithoutFoundation={() => {
+                  sessionStorage.setItem(`${projectType}_foundation_step_choice`, "finish");
+                  const raw = sessionStorage.getItem(`${projectType}_condition`);
+                  const prev = raw ? JSON.parse(raw) : {};
+                  const next = { ...prev, foundationEnabled: false };
+                  sessionStorage.setItem(`${projectType}_condition`, JSON.stringify(next));
+
+                  const rawConfig = sessionStorage.getItem(`${projectType}_calculation_config`);
+                  const prevConfig = rawConfig ? JSON.parse(rawConfig) : {};
+                  sessionStorage.setItem(
+                    `${projectType}_calculation_config`,
+                    JSON.stringify({ ...prevConfig, foundation: false })
+                  );
+                  notifyCalculationProgressChanged();
+                  handleGenerateReportClick();
+                }}
+              />
+            )}
 
             {/* ── Result table ── */}
             <div id="results-op">

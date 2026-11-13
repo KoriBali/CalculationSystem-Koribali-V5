@@ -289,6 +289,11 @@ export function usePoleCalculation({
   // ── Calculate ──
   // Validates all inputs then calls the pole calculation API
   const calculate = async () => {
+    if (poleStandardForm.poleTypeStandard?.type === "straight") {
+      showToast("Calculation for Straight Pole is currently in development.", "error");
+      return;
+    }
+
     resetAllErrors();
 
     const validation = await validatePoleForm({

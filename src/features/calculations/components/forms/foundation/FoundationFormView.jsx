@@ -86,6 +86,10 @@ export default function FoundationFormView() {
     }
     const result = handleFinish();
     if (result === "OPEN_COVER") {
+      if (isProjectTools) {
+        handleGenerateReportClick();
+        return;
+      }
       setShowFinishModal(true);
     }
   };
@@ -102,8 +106,15 @@ export default function FoundationFormView() {
     }
   };
 
-  const handleGenerateReportClick = () => {
+  const handleGenerateReportClick = async () => {
     setShowFinishModal(false);
+    if (isProjectTools) {
+      await report.makeReport({
+        isCalculated,
+        showToast,
+      });
+      return;
+    }
     if (draftId) {
       saveWorkingSessionToDraft(projectType, draftId);
     }
@@ -219,7 +230,7 @@ export default function FoundationFormView() {
                       onBack={handleBack}
                       onNext={handleNextStep}
                       isCalculated={isCalculated}
-                      buttonLabel={buttonLabel}
+                      buttonLabel={isProjectTools ? "Generate Report" : buttonLabel}
                       readOnly={isReadOnly}
                     />
                   )}
@@ -234,7 +245,7 @@ export default function FoundationFormView() {
                       onBack={handleBack}
                       onNext={handleNextStep}
                       isCalculated={isCalculated}
-                      buttonLabel={buttonLabel}
+                      buttonLabel={isProjectTools ? "Generate Report" : buttonLabel}
                       readOnly={isReadOnly}
                     />
                   )}
