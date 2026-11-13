@@ -248,8 +248,8 @@ export default function Layout() {
     navigate(prompt.target);
   };
 
-  // Logo → default page (project list).
-  const handleLogoClick = () => leaveCalculation("/projects");
+  // Logo → default page (project tools).
+  const handleLogoClick = () => leaveCalculation("/project-tools");
 
   // Header breadcrumb — context-aware:
   // • New-project flow: "Projects" crumb → the project list.
@@ -447,7 +447,7 @@ export default function Layout() {
               ? () => navigate("/project-tools")
               : isNewRequest
                 ? () => leaveNewRequest("/projects")
-                : handleLogoClick
+                : () => leaveCalculation("/projects")
           }
           onProjectCrumbClick={
             isProjectTools

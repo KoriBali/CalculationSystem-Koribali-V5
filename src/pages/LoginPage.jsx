@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate("/projects");
+      navigate("/project-tools");
     }
   }, []);
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
       const user = await getMe();
       setUser(user);
 
-      navigate("/projects");
+      navigate("/project-tools");
     } catch (error) {
       console.error("[handleGuestLogin] Login failed:", error);
       setLoginError(
@@ -138,7 +138,7 @@ export default function LoginPage() {
         const user = await getMe();
         setUser(user);
 
-        navigate("/projects");
+        navigate("/project-tools");
       } catch (error) {
         setLoginError(
           error.response?.data?.detail ||

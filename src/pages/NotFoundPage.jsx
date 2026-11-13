@@ -11,7 +11,7 @@ export default function NotFoundPage() {
 
   const backPath = activeDraftId
     ? `/projects/${activeProject}/${activeDraftId}`
-    : "/projects";
+    : "/project-tools";
 
   const buttonLabel = activeDraftId ? "Back to Calculation" : "Back to Main Menu";
 

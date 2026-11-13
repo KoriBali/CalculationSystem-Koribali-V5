@@ -13,7 +13,7 @@ const RoleGuard = ({ allowedRoles = [] }) => {
   const userRole = user?.role || "drafter";
   
   if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/projects" replace />;
+    return <Navigate to="/project-tools" replace />;
   }
 
   return <Outlet />;

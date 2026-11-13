@@ -200,7 +200,7 @@ export default function AppRoutes() {
           </Route>
 
           {/* Global Redirects & 404 (Protected) */}
-          <Route path="/" element={<Navigate to="/projects" replace />} />
+          <Route path="/" element={<Navigate to="/project-tools" replace />} />
           <Route path="/404" element={<NotFoundPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
