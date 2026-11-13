@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjectStorage } from "./useProjectStorage";
 
 import { validateFoundation } from "../logic/foundation/foundationValidation";
@@ -13,6 +13,8 @@ import * as Utils from "../utils";
 export function useFoundationForm() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
 
   // Safely retrieve condition data from session storage
   const getCondition = () => {
@@ -253,12 +255,20 @@ export function useFoundationForm() {
       return "OPEN_COVER";
     }
 
-    navigate(`/projects/${projectType}/${draftId}/${nextStep}`);
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/${nextStep}`
+        : `/projects/${projectType}/${draftId}/${nextStep}`
+    );
   };
 
   // Navigates back to the previous step (pole, opening, or baseplate — whichever is enabled)
   const handleBack = () => {
-    navigate(`/projects/${projectType}/${draftId}/${prevStep}`);
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/${prevStep}`
+        : `/projects/${projectType}/${draftId}/${prevStep}`
+    );
   };
 
   // Mapping for UI labels

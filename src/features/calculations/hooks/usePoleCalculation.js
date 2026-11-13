@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useProjectStorage } from "./useProjectStorage";
 
 import { validatePoleForm } from "../logic/pole/poleValidation";
@@ -27,6 +27,8 @@ export function usePoleCalculation({
 }) {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
 
   // Read condition from sessionStorage
   const condition = (() => {
@@ -480,7 +482,9 @@ export function usePoleCalculation({
     );
 
     const activeDraft = draftId || sessionStorage.getItem(`${projectType}_active_draft_id`);
-    if (activeDraft) {
+    if (isProjectTools) {
+      navigate(`/project-tools/${projectType}/report`, { state: reportPayload });
+    } else if (activeDraft) {
       saveWorkingSessionToDraft(projectType, activeDraft);
       navigate(`/projects/${projectType}/${activeDraft}/report`, { state: reportPayload });
     } else {
@@ -493,7 +497,11 @@ export function usePoleCalculation({
   const finish = () => {
     if (!isCalculated) return;
     if (isLast) return "OPEN_COVER";
-    navigate(`/projects/${projectType}/${draftId}/${nextStep}`);
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/${nextStep}`
+        : `/projects/${projectType}/${draftId}/${nextStep}`
+    );
   };
 
   return {

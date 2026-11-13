@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { HeaderCalculationPage } from "../../components/layout/HeaderCalculationPage";
 import { DrawingPoleForm } from "../../components/forms/drawing/DrawingPoleForm";
 import { ToastModal } from "../../components/modals/ToastModal";
@@ -8,6 +8,11 @@ import { useDrawingPoleForm } from "../../hooks/useDrawingPoleForm";
 export default function DrawingPolePage() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const drawingPrefix = isProjectTools
+    ? `/project-tools/${projectType}/drawing`
+    : `/projects/${projectType}/${draftId}/drawing`;
 
   const {
     localPole,
@@ -24,18 +29,18 @@ export default function DrawingPolePage() {
   const onNextStep = async () => {
     const result = await handleNext();
     if (result === "GO_OPENING") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/opening`);
+      navigate(`${drawingPrefix}/opening`);
     } else if (result === "GO_BASEPLATE") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/baseplate`);
+      navigate(`${drawingPrefix}/baseplate`);
     } else if (result === "GO_COUPLING") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/coupling`);
+      navigate(`${drawingPrefix}/coupling`);
     } else if (result === "GO_SURFACE") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/surface`);
+      navigate(`${drawingPrefix}/surface`);
     }
   };
 
   const onBack = () => {
-    navigate(`/projects/${projectType}/${draftId}/drawing/drawing-setup`);
+    navigate(`${drawingPrefix}/drawing-setup`);
   };
 
   return (

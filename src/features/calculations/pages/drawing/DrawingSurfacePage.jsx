@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { HeaderCalculationPage } from "../../components/layout/HeaderCalculationPage";
 import { SurfaceForm } from "../../components/forms/drawing/SurfaceForm";
 import { ToastModal } from "../../components/modals/ToastModal";
@@ -14,6 +14,11 @@ import { getUser } from "../../../../utils/auth";
 export default function DrawingSurfacePage() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const drawingPrefix = isProjectTools
+    ? `/project-tools/${projectType}/drawing`
+    : `/projects/${projectType}/${draftId}/drawing`;
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
@@ -40,15 +45,15 @@ export default function DrawingSurfacePage() {
     const general = JSON.parse(sessionStorage.getItem(`${projectType}_drawing_general`) || "{}");
     
     if (isCouplingUsed) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/coupling`);
+      navigate(`${drawingPrefix}/coupling`);
     } else if (general?.additionalComponents?.foundation) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/foundation`);
+      navigate(`${drawingPrefix}/foundation`);
     } else if (general?.additionalComponents?.baseplate) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/baseplate`);
+      navigate(`${drawingPrefix}/baseplate`);
     } else if (general?.additionalComponents?.opening) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/opening`);
+      navigate(`${drawingPrefix}/opening`);
     } else {
-      navigate(`/projects/${projectType}/${draftId}/drawing/pole`);
+      navigate(`${drawingPrefix}/pole`);
     }
   };
 

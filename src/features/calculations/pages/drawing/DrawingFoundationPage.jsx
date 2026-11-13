@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { HeaderCalculationPage } from "../../components/layout/HeaderCalculationPage";
 import { DrawingFoundationForm } from "../../components/forms/drawing/DrawingFoundationForm";
 import { ToastModal } from "../../components/modals/ToastModal";
@@ -8,6 +8,11 @@ import { useDrawingFoundationForm } from "../../hooks/useDrawingFoundationForm";
 export default function DrawingFoundationPage() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const drawingPrefix = isProjectTools
+    ? `/project-tools/${projectType}/drawing`
+    : `/projects/${projectType}/${draftId}/drawing`;
 
   const {
     foundationType,
@@ -40,9 +45,9 @@ export default function DrawingFoundationPage() {
     if (result) {
       const isCouplingUsed = sessionStorage.getItem(`${projectType}_drawing_coupling_confirmed`) === "true";
       if (isCouplingUsed) {
-        navigate(`/projects/${projectType}/${draftId}/drawing/coupling`);
+        navigate(`${drawingPrefix}/coupling`);
       } else {
-        navigate(`/projects/${projectType}/${draftId}/drawing/surface`);
+        navigate(`${drawingPrefix}/surface`);
       }
     }
   };
@@ -50,11 +55,11 @@ export default function DrawingFoundationPage() {
   const onBack = () => {
     const general = JSON.parse(sessionStorage.getItem(`${projectType}_drawing_general`) || "{}");
     if (general?.additionalComponents?.baseplate) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/baseplate`);
+      navigate(`${drawingPrefix}/baseplate`);
     } else if (general?.additionalComponents?.opening) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/opening`);
+      navigate(`${drawingPrefix}/opening`);
     } else {
-      navigate(`/projects/${projectType}/${draftId}/drawing/pole`);
+      navigate(`${drawingPrefix}/pole`);
     }
   };
 

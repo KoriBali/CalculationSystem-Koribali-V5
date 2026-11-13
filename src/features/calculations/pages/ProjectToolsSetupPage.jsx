@@ -132,10 +132,22 @@ export default function ProjectToolsSetupPage() {
       sessionStorage.setItem(
         `${projectType}_condition`,
         JSON.stringify({
+          designStandard: "jil",
+          designWindSpeed: 60,
+          designAirDensity: 1.225,
           poleType: designType,
-          openingEnabled: designType === "standard",
-          baseplateEnabled: designType === "standard",
+          openingEnabled: true,
+          baseplateEnabled: true,
           foundationEnabled: false,
+        })
+      );
+      sessionStorage.setItem(
+        `${projectType}_calculation_config`,
+        JSON.stringify({
+          pole: true,
+          opening: true,
+          baseplate: true,
+          foundation: false,
         })
       );
     } catch (err) {
@@ -146,6 +158,45 @@ export default function ProjectToolsSetupPage() {
   const handleReset = () => {
     setWorkType("calculation");
     setDesignType("standard");
+    const keysToRemove = [
+      "drawing_general",
+      "drawing_pole",
+      "drawing_opening",
+      "drawing_baseplate",
+      "drawing_foundation",
+      "drawing_coupling",
+      "drawing_surface",
+      "drawing_completed",
+      "drawing_pole_completed",
+      "drawing_opening_completed",
+      "drawing_baseplate_completed",
+      "drawing_foundation_completed",
+      "drawing_coupling_completed",
+      "drawing_coupling_confirmed",
+      "drawing_started",
+      "poles",
+      "poleConfig",
+      "directObjects",
+      "arms",
+      "overheadWires",
+      "results",
+      "resultsDo",
+      "resultsArm",
+      "resultsOhw",
+      "calculatedOp",
+      "calculatedBaseplate",
+      "calculatedFoundation",
+      "isCalculatedPole",
+      "isCalculatedOp",
+      "isCalculatedBp",
+      "isCalculatedFd",
+      "cover",
+      "reportSnapshot",
+      "hasReport",
+    ];
+    keysToRemove.forEach((k) => {
+      sessionStorage.removeItem(`${projectType}_${k}`);
+    });
     setShowResetModal(false);
   };
 
@@ -160,12 +211,30 @@ export default function ProjectToolsSetupPage() {
       sessionStorage.setItem(
         `${projectType}_condition`,
         JSON.stringify({
+          designStandard: "jil",
+          designWindSpeed: 60,
+          designAirDensity: 1.225,
           poleType: designType,
-          openingEnabled: designType === "standard",
-          baseplateEnabled: designType === "standard",
+          openingEnabled: true,
+          baseplateEnabled: true,
           foundationEnabled: false,
         })
       );
+      sessionStorage.setItem(
+        `${projectType}_calculation_config`,
+        JSON.stringify({
+          pole: true,
+          opening: true,
+          baseplate: true,
+          foundation: false,
+        })
+      );
+
+      if (workType === "drawing") {
+        navigate(`/project-tools/${projectType}/drawing/drawing-setup`);
+      } else {
+        navigate(`/project-tools/${projectType}/initial`);
+      }
     } catch (err) {
       console.error("Failed to save setup:", err);
     }

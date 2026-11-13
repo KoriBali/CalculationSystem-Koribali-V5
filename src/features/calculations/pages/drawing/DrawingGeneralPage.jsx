@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { HeaderCalculationPage } from "../../components/layout/HeaderCalculationPage";
 import { DrawingGeneralForm } from "../../components/forms/drawing/DrawingGeneralForm";
 import { ToastModal } from "../../components/modals/ToastModal";
@@ -12,6 +12,7 @@ import { requestPathForDraft } from "../../utils/requestCases";
 export default function DrawingGeneralPage() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     localGeneral,
@@ -35,6 +36,10 @@ export default function DrawingGeneralPage() {
   };
 
   const onBackStep = () => {
+    if (location.pathname.startsWith("/project-tools")) {
+      navigate(`/project-tools/${projectType}/setup`);
+      return;
+    }
     navigate(requestPathForDraft(draftId));
   };
 

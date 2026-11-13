@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Box } from "lucide-react";
 
 import { HeaderCalculationPage } from "../../layout/HeaderCalculationPage";
@@ -30,6 +30,8 @@ export default function OpeningFormView() {
   const { type: projectType, draftId } = useParams();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
   const [showCoverModal, setShowCoverModal] = useState(false);
@@ -44,7 +46,11 @@ export default function OpeningFormView() {
     if (isReadOnly) {
       const result = opening.finish(true);
       if (result === "OPEN_COVER") {
-        navigate(`/projects/${projectType}/${draftId}/report`);
+        navigate(
+          isProjectTools
+            ? `/project-tools/${projectType}/report`
+            : `/projects/${projectType}/${draftId}/report`
+        );
       }
       return;
     }

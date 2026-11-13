@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useProjectStorage } from "./useProjectStorage";
 
 import { validateOpening } from "../logic/opening/openingValidation";
@@ -25,6 +25,8 @@ const TYPE_LABEL_MAP = {
 export function useOpeningForm() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
 
   // Read condition from sessionStorage — projectType must be available first
   const condition = (() => {
@@ -268,12 +270,20 @@ export function useOpeningForm() {
   const finish = (force = false) => {
     if (!isCalculated && !force) return;
     if (isLast) return "OPEN_COVER";
-    navigate(`/projects/${projectType}/${draftId}/${nextStep}`);
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/${nextStep}`
+        : `/projects/${projectType}/${draftId}/${nextStep}`
+    );
   };
 
   // Navigates back to the previous step (always "pole" for opening)
   const goBack = () => {
-    navigate(`/projects/${projectType}/${draftId}/${prevStep}`);
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/${prevStep}`
+        : `/projects/${projectType}/${draftId}/${prevStep}`
+    );
   };
 
   // ── Return ──

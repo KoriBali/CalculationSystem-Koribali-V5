@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import { validateCondition } from "../logic/initial-setup/conditionValidation";
 import {
@@ -29,6 +29,7 @@ const getDefaultCondition = (projectType) => ({
 export function useConditionForm() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Persisted condition — auto sync ke sessionStorage via useProjectStorage
   const [condition, setCondition] = useProjectStorage(
@@ -136,7 +137,12 @@ export function useConditionForm() {
     setCondition(localCondition);
 
     // 5. Navigate to pole step
-    navigate(`/projects/${projectType}/${draftId}/pole`);
+    const isProjectTools = location.pathname.startsWith("/project-tools");
+    navigate(
+      isProjectTools
+        ? `/project-tools/${projectType}/pole`
+        : `/projects/${projectType}/${draftId}/pole`
+    );
   };
 
   return {

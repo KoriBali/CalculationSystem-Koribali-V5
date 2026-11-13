@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -133,6 +133,8 @@ export default function PoleFormView() {
   const { isReadOnly } = useReadOnly();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
   // Read condition from sessionStorage
   const condition = (() => {
     try {
@@ -1545,7 +1547,11 @@ export default function PoleFormView() {
             {/* Back => returns to Initial Input step */}
             <button
               onClick={() =>
-                navigate(`/projects/${projectType}/${draftId}/initial`)
+                navigate(
+                  isProjectTools
+                    ? `/project-tools/${projectType}/initial`
+                    : `/projects/${projectType}/${draftId}/initial`
+                )
               }
               disabled={isShowingCalcLoading}
               className="flex justify-center items-center gap-2 px-5 py-2.5 sm:py-2 lg:py-2.5 hp:px-3 hp:py-2 md:px-6
@@ -1619,7 +1625,11 @@ export default function PoleFormView() {
                 onClick={
                   isReadOnly
                     ? () =>
-                        navigate(`/projects/${projectType}/${draftId}/opening`)
+                        navigate(
+                          isProjectTools
+                            ? `/project-tools/${projectType}/opening`
+                            : `/projects/${projectType}/${draftId}/opening`
+                        )
                     : handleFinish
                 }
                 aria-disabled={

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Box } from "lucide-react";
 
 import { HeaderCalculationPage } from "../../layout/HeaderCalculationPage";
@@ -34,6 +34,8 @@ export default function FoundationFormView() {
   const [showCoverModal, setShowCoverModal] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
   // ================= FOUNDATION FORM HOOK =================
   const {
     // State
@@ -70,7 +72,11 @@ export default function FoundationFormView() {
     if (isReadOnly) {
       const result = handleFinish(true);
       if (result === "OPEN_COVER") {
-        navigate(`/projects/${projectType}/${draftId}/report`);
+        navigate(
+          isProjectTools
+            ? `/project-tools/${projectType}/report`
+            : `/projects/${projectType}/${draftId}/report`
+        );
       }
       return;
     }

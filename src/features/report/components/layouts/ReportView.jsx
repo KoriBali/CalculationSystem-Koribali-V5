@@ -667,6 +667,10 @@ export function ReportView() {
   };
 
   const onBackCalculation = () => {
+    if (location.pathname.startsWith("/project-tools")) {
+      navigate(`/project-tools/${projectType}/initial`);
+      return;
+    }
     if (projectType && draftId) {
       navigate(`/projects/${projectType}/${draftId}/initial`);
       return;
@@ -680,6 +684,10 @@ export function ReportView() {
   };
 
   const onBackRequest = () => {
+    if (location.pathname.startsWith("/project-tools")) {
+      navigate(`/project-tools/${projectType}/setup`);
+      return;
+    }
     const backPath = activeDraftRequestPath(projectType);
     if (backPath && backPath !== "/projects") {
       navigate(backPath);

@@ -166,7 +166,49 @@ export default function AppRoutes() {
             <Route path="submissions" element={<MySubmissionsPage />} />
             <Route path="project-tools">
               <Route index element={<ProjectToolsPage />} />
-              <Route path=":type/setup" element={<ProjectToolsSetupPage />} />
+              <Route path=":type" element={<TypeGuard />}>
+                <Route path="setup" element={<ProjectToolsSetupPage />} />
+                <Route element={<SessionGuard />}>
+                  {/* Calculation Steps */}
+                  <Route path="initial" element={<InitialInputPage />} />
+                  <Route path="pole" element={<PoleFormPage />} />
+                  <Route path="opening" element={<OpeningFormPage />} />
+                  <Route path="baseplate" element={<BaseplateFormPage />} />
+                  <Route path="foundation" element={<FoundationFormPage />} />
+                  <Route path="report" element={<ReportPage />} />
+
+                  {/* Drawing Steps */}
+                  <Route
+                    path="drawing"
+                    element={<Navigate to="drawing-setup" replace />}
+                  />
+                  <Route
+                    path="drawing/drawing-setup"
+                    element={<DrawingGeneralPage />}
+                  />
+                  <Route path="drawing/pole" element={<DrawingPolePage />} />
+                  <Route
+                    path="drawing/opening"
+                    element={<DrawingOpeningPage />}
+                  />
+                  <Route
+                    path="drawing/baseplate"
+                    element={<DrawingBaseplatePage />}
+                  />
+                  <Route
+                    path="drawing/foundation"
+                    element={<DrawingFoundationPage />}
+                  />
+                  <Route
+                    path="drawing/coupling"
+                    element={<DrawingCouplingPage />}
+                  />
+                  <Route
+                    path="drawing/surface"
+                    element={<DrawingSurfacePage />}
+                  />
+                </Route>
+              </Route>
             </Route>
             <Route path="database" element={<ProjectDatabasePage />} />
 

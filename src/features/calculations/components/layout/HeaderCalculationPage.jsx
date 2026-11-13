@@ -29,6 +29,7 @@ import { ToastModal } from "../modals/ToastModal";
 import { LockedDrawingModal } from "../modals/LockedDrawingModal";
 import { SmartPreserveModal } from "../modals/SmartPreserveModal";
 import { BaseplateIcon } from "../../../../assets/icon";
+import { projectTypeLabel } from "../../constants/projectTypes";
 import { clearCalculationSession } from "../../utils";
 import {
   saveWorkingSessionToDraft,
@@ -46,6 +47,10 @@ export function HeaderCalculationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { type, draftId } = useParams();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const basePath = isProjectTools
+    ? `/project-tools/${type}`
+    : `/projects/${type}/${draftId}`;
   const { isReadOnly: isContextReadOnly, owner: caseOwner } = useReadOnly();
   const isReadOnly = isContextReadOnly || sessionStorage.getItem("case_read_only") === "true";
   const [showReadOnlyPopover, setShowReadOnlyPopover] = useState(false);
@@ -268,7 +273,7 @@ export function HeaderCalculationPage() {
     workflow.projectMode === "both" && condition?.poleType === "custom";
 
   // ─── STEP COMPLETION ─────────────────────────────────────────────────────
-  const isConditionCompleted = !!condition?.designStandard;
+  const isConditionCompleted = isProjectTools ? true : !!condition?.designStandard;
   const isPoleStepCompleted = (() => {
     if (!config?.pole) return false;
     if (sessionStorage.getItem(`${type}_isCalculatedPole`) !== "true")
@@ -338,7 +343,7 @@ export function HeaderCalculationPage() {
   const navItems = [
     {
       label: "Initial",
-      path: `/projects/${type}/${draftId}/initial`,
+      path: `${basePath}/initial`,
       icon: LayoutDashboard,
       completed: isConditionCompleted,
       disabled: false,
@@ -349,7 +354,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Pole",
-            path: `/projects/${type}/${draftId}/pole`,
+            path: `${basePath}/pole`,
             icon: TowerControl,
             completed: isPoleStepCompleted,
             disabled: !isConditionCompleted,
@@ -362,7 +367,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Opening",
-            path: `/projects/${type}/${draftId}/opening`,
+            path: `${basePath}/opening`,
             icon: DoorOpen,
             completed: isOpeningStepCompleted,
             disabled: config?.pole
@@ -379,7 +384,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Baseplate",
-            path: `/projects/${type}/${draftId}/baseplate`,
+            path: `${basePath}/baseplate`,
             icon: BaseplateIcon,
             completed: isBaseplateStepCompleted,
             disabled:
@@ -397,7 +402,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Foundation",
-            path: `/projects/${type}/${draftId}/foundation`,
+            path: `${basePath}/foundation`,
             icon: Layers,
             completed: isFoundationStepCompleted,
             disabled:
@@ -417,6 +422,7 @@ export function HeaderCalculationPage() {
 
   const isDrawingPage =
     location.pathname.includes(`/projects/${type}/${draftId}/drawing`) ||
+    location.pathname.includes(`/project-tools/${type}/drawing`) ||
     location.pathname.includes(`/requests/${type}/${draftId}/drawing`);
 
   // ─── DRAWING COMPLETION ──────────────────────────────────────────────────
@@ -473,7 +479,7 @@ export function HeaderCalculationPage() {
   const drawingNavItems = [
     {
       label: "Drawing Setup",
-      path: `/projects/${type}/${draftId}/drawing/drawing-setup`,
+      path: `${basePath}/drawing/drawing-setup`,
       icon: FileEdit,
       disabled: false,
       completed: isDrawingSetupCompleted,
@@ -483,7 +489,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Pole",
-            path: `/projects/${type}/${draftId}/drawing/pole`,
+            path: `${basePath}/drawing/pole`,
             icon: TowerControlIcon,
             disabled: false,
             completed: isPoleCompleted,
@@ -496,7 +502,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Opening",
-            path: `/projects/${type}/${draftId}/drawing/opening`,
+            path: `${basePath}/drawing/opening`,
             icon: DoorOpen,
             disabled: !isPoleCompleted,
             completed: isOpeningCompleted,
@@ -509,7 +515,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Baseplate",
-            path: `/projects/${type}/${draftId}/drawing/baseplate`,
+            path: `${basePath}/drawing/baseplate`,
             icon: BaseplateIcon,
             disabled:
               !isPoleCompleted || (isOpeningEnabled && !isOpeningCompleted),
@@ -525,7 +531,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Foundation",
-            path: `/projects/${type}/${draftId}/drawing/foundation`,
+            path: `${basePath}/drawing/foundation`,
             icon: Layers,
             disabled:
               !isPoleCompleted ||
@@ -545,7 +551,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Coupling",
-            path: `/projects/${type}/${draftId}/drawing/coupling`,
+            path: `${basePath}/drawing/coupling`,
             icon: Link,
             disabled:
               !isPoleCompleted ||
@@ -561,7 +567,7 @@ export function HeaderCalculationPage() {
       ? [
           {
             label: "Surface",
-            path: `/projects/${type}/${draftId}/drawing/surface`,
+            path: `${basePath}/drawing/surface`,
             icon: PaintBucket,
             disabled:
               !isPoleCompleted ||
@@ -583,6 +589,10 @@ export function HeaderCalculationPage() {
 
   // ─── BACK ────────────────────────────────────────────────────────────────
   const handleBackClick = () => {
+    if (isProjectTools) {
+      navigate(`/project-tools/${type}/setup`);
+      return;
+    }
     // Check if draft actually changed before showing modal
     if (!hasDraftChanged(type, draftId)) {
       handleDiscard();
@@ -776,37 +786,41 @@ export function HeaderCalculationPage() {
               <PanelLeftOpen className="w-4 h-4" />
             </button>
 
-            <div className="w-8 h-px bg-white/20 my-1" />
+            {!isProjectTools && (
+              <>
+                <div className="w-8 h-px bg-white/20 my-1" />
 
-            <button
-              type="button"
-              disabled={isSavingDraft}
-              data-readonly-trigger={isReadOnly ? "true" : undefined}
-              onClick={isReadOnly ? handleToggleReadOnlyPopover : handleQuickSave}
-              title={
-                isReadOnly
-                  ? `Read-Only: Assigned to ${caseOwner || "another engineer"}`
-                  : isSavingDraft
-                  ? "Saving Draft..."
-                  : "Save Draft"
-              }
-              aria-label={
-                isReadOnly
-                  ? `Read-Only: Assigned to ${caseOwner || "another engineer"}`
-                  : isSavingDraft
-                  ? "Saving Draft..."
-                  : "Save Draft"
-              }
-              className="flex items-center justify-center w-[38px] h-[38px] shrink-0 rounded-lg hover:bg-white/10 active:bg-white/15 transition text-amber-300 disabled:opacity-60"
-            >
-              {isReadOnly ? (
-                <Lock className="w-4 h-4 text-amber-300" />
-              ) : isSavingDraft ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-            </button>
+                <button
+                  type="button"
+                  disabled={isSavingDraft}
+                  data-readonly-trigger={isReadOnly ? "true" : undefined}
+                  onClick={isReadOnly ? handleToggleReadOnlyPopover : handleQuickSave}
+                  title={
+                    isReadOnly
+                      ? `Read-Only: Assigned to ${caseOwner || "another engineer"}`
+                      : isSavingDraft
+                      ? "Saving Draft..."
+                      : "Save Draft"
+                  }
+                  aria-label={
+                    isReadOnly
+                      ? `Read-Only: Assigned to ${caseOwner || "another engineer"}`
+                      : isSavingDraft
+                      ? "Saving Draft..."
+                      : "Save Draft"
+                  }
+                  className="flex items-center justify-center w-[38px] h-[38px] shrink-0 rounded-lg hover:bg-white/10 active:bg-white/15 transition text-amber-300 disabled:opacity-60"
+                >
+                  {isReadOnly ? (
+                    <Lock className="w-4 h-4 text-amber-300" />
+                  ) : isSavingDraft ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                </button>
+              </>
+            )}
           </div>
 
           {/* ─── FULL HEADER ────────────────────────────────────────────────────
@@ -838,7 +852,9 @@ export function HeaderCalculationPage() {
                   >
                     <ArrowLeft className="w-4 h-4 shrink-0" />
 
-                    <span className="truncate">Back to Project Detail</span>
+                    <span className="truncate">
+                      {isProjectTools ? "Back to Setup" : "Back to Project Detail"}
+                    </span>
                   </button>
                 </div>
 
@@ -859,14 +875,14 @@ export function HeaderCalculationPage() {
                         }
                         onClick={() => {
                           if (config?.foundation)
-                            navigate(`/projects/${type}/${draftId}/foundation`);
+                            navigate(`${basePath}/foundation`);
                           else if (config?.baseplate)
-                            navigate(`/projects/${type}/${draftId}/baseplate`);
+                            navigate(`${basePath}/baseplate`);
                           else if (config?.opening)
-                            navigate(`/projects/${type}/${draftId}/opening`);
+                            navigate(`${basePath}/opening`);
                           else if (config?.pole)
-                            navigate(`/projects/${type}/${draftId}/pole`);
-                          else navigate(`/projects/${type}/${draftId}/initial`);
+                            navigate(`${basePath}/pole`);
+                          else navigate(`${basePath}/initial`);
                         }}
                         className={`group flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-all duration-200
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70
@@ -934,7 +950,7 @@ export function HeaderCalculationPage() {
                                 "true",
                               );
                               navigate(
-                                `/projects/${type}/${draftId}/drawing/drawing-setup`,
+                                `${basePath}/drawing/drawing-setup`,
                               );
                             }
                           }
@@ -976,9 +992,13 @@ export function HeaderCalculationPage() {
                   ) : null}
                 </div>
 
-                {/* SAVE DRAFT + MINIMIZE */}
+                {/* SAVE DRAFT + MINIMIZE / PROJECT TITLE */}
                 <div className="flex-1 flex items-center justify-end gap-2 relative">
-                  {isReadOnly ? (
+                  {isProjectTools ? (
+                    <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:inline">
+                      {projectTypeLabel(type)}
+                    </span>
+                  ) : isReadOnly ? (
                     <button
                       type="button"
                       data-readonly-trigger="true"

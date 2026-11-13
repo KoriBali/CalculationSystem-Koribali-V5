@@ -1,14 +1,13 @@
 // guards/SessionGuard.jsx
-import { useParams, Outlet, Navigate } from "react-router-dom";
+import { useParams, Outlet } from "react-router-dom";
 
-// Memastikan type di URL sesuai dengan project yang dipilih user
-// Mencegah user manual ganti URL ke project type lain
+// Memastikan sessionStorage projectType selalu tersinkronisasi dengan :type di URL
+// agar tidak melempar 404 saat bernavigasi antar menu (Database, Project Tools, My Works)
 export default function SessionGuard() {
   const { type } = useParams();
-  const savedType = sessionStorage.getItem("projectType");
 
-  if (type !== savedType) {
-    return <Navigate to="/404" replace />;
+  if (type && sessionStorage.getItem("projectType") !== type) {
+    sessionStorage.setItem("projectType", type);
   }
 
   return <Outlet />;

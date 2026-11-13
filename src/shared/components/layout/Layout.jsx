@@ -43,6 +43,9 @@ import {
   forgetRequestsPath,
   lastRequestsPath,
   rememberRequestsPath,
+  forgetProjectToolsPath,
+  lastProjectToolsPath,
+  rememberProjectToolsPath,
 } from "../../../features/calculations/utils/requestsLastPath";
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
@@ -79,7 +82,7 @@ export default function Layout() {
   const isCalculationRoot = location.pathname === "/projects" || location.pathname === "/requests";
   const isCheckingQueue = location.pathname.startsWith("/checking-queue");
   const isProjectTools = location.pathname.startsWith("/project-tools");
-  const projectToolsSetupMatch = location.pathname.match(/^\/project-tools\/([^/]+)\/setup/);
+  const projectToolsMatch = location.pathname.match(/^\/project-tools\/([^/]+)(?:\/(.*))?$/);
   // Covers /projects/new (type picker) and /projects/new/:type (form).
   const isNewRequest = /^\/(projects|requests)\/new(\/|$)/.test(location.pathname);
   // /projects/detail/:requestId — Projects > [its Request No.]
@@ -95,16 +98,33 @@ export default function Layout() {
   const draftCase = draftId ? findRequestOfCase(draftId) : null;
 
   let currentTitle;
-  if (projectToolsSetupMatch) {
-    const typeSlug = projectToolsSetupMatch[1];
+  if (location.pathname === "/project-tools") {
+    currentTitle = "Project Tools";
+  } else if (projectToolsMatch) {
+    const typeSlug = projectToolsMatch[1];
+    const subStep = projectToolsMatch[2] || "setup";
     const formattedType = formatProjectType(typeSlug);
+    const stepLabelMap = {
+      setup: "Setup",
+      initial: "Initial",
+      pole: "Pole",
+      opening: "Opening",
+      baseplate: "Baseplate",
+      foundation: "Foundation",
+      report: "Report",
+      "drawing/drawing-setup": "Drawing Setup",
+      "drawing/pole": "Pole",
+      "drawing/opening": "Opening",
+      "drawing/baseplate": "Baseplate",
+      "drawing/foundation": "Foundation",
+      "drawing/coupling": "Coupling",
+      "drawing/surface": "Surface",
+    };
     currentTitle = {
       global: formattedType || "Lighting Project",
-      stage: "Setup",
+      stage: stepLabelMap[subStep] || (subStep.charAt(0).toUpperCase() + subStep.slice(1)),
       substage: null,
     };
-  } else if (location.pathname === "/project-tools") {
-    currentTitle = "Project Tools";
   } else if (requestDetailId) {
     const request = getRequest(requestDetailId);
     currentTitle = {
@@ -287,15 +307,22 @@ export default function Layout() {
     }
   };
 
-  // Remember where the user is inside Projects, for the sidebar link below.
+  // Remember where the user is inside Projects & Project Tools, for the sidebar link below.
   useEffect(() => {
-    rememberRequestsPath(location.pathname + location.search);
+    const fullPath = location.pathname + location.search;
+    rememberRequestsPath(fullPath);
+    rememberProjectToolsPath(fullPath);
   }, [location.pathname, location.search]);
 
-  // Returns nav path. Projects: back to where the user last was in it
-  // (list, project type, new project form, a calculation …); without that,
-  // the current project type's active draft or the project list.
+  // Returns nav path. Projects / Project Tools: back to where the user last was in it;
+  // without that, default page.
   const getMenuPath = (path) => {
+    if (path === "/project-tools") {
+      const lastTools = lastProjectToolsPath();
+      if (lastTools) return lastTools;
+      return "/project-tools";
+    }
+
     const isProjMenu = path === "/projects" || path === "/requests";
     const lastPath = isProjMenu ? lastRequestsPath() : null;
     if (lastPath) return lastPath;
@@ -384,6 +411,7 @@ export default function Layout() {
     sessionStorage.removeItem("projectType");
     clearNewRequestDraft();
     forgetRequestsPath();
+    forgetProjectToolsPath();
     navigate("/login");
 
     // Fire-and-forget: invalidate token server-side in background.

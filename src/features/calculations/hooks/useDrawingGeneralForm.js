@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { validateWithYup } from "../utils/validation";
 import { DrawingGeneralSchema } from "../schemas/drawing/DrawingGeneralSchema";
 import { useProjectStorage } from "./useProjectStorage";
@@ -40,6 +40,11 @@ const writeCommittedGeneral = (projectType, data) => {
 export function useDrawingGeneralForm() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const drawingPrefix = isProjectTools
+    ? `/project-tools/${projectType}/drawing`
+    : `/projects/${projectType}/${draftId}/drawing`;
 
   // We still use useProjectStorage so that saving to drafts / clearing session works.
   // But we do NOT rely on its auto-write effect for the real-time header sync.
@@ -143,14 +148,14 @@ export function useDrawingGeneralForm() {
 
     // Navigate — header will re-render on new page with correct sessionStorage data
     if (workflow.projectMode === "drawing") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/pole`);
+      navigate(`${drawingPrefix}/pole`);
       return;
     }
 
     if (localGeneral.useCoupling) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/coupling`);
+      navigate(`${drawingPrefix}/coupling`);
     } else {
-      navigate(`/projects/${projectType}/${draftId}/drawing/surface`);
+      navigate(`${drawingPrefix}/surface`);
     }
   };
 

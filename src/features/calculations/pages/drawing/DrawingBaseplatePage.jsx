@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { HeaderCalculationPage } from "../../components/layout/HeaderCalculationPage";
 import { DrawingBaseplateForm } from "../../components/forms/drawing/DrawingBaseplateForm";
 import { ToastModal } from "../../components/modals/ToastModal";
@@ -8,6 +8,11 @@ import { useDrawingBaseplateForm } from "../../hooks/useDrawingBaseplateForm";
 export default function DrawingBaseplatePage() {
   const { type: projectType, draftId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isProjectTools = location.pathname.startsWith("/project-tools");
+  const drawingPrefix = isProjectTools
+    ? `/project-tools/${projectType}/drawing`
+    : `/projects/${projectType}/${draftId}/drawing`;
 
   const {
     localBaseplate,
@@ -23,20 +28,20 @@ export default function DrawingBaseplatePage() {
   const onNextStep = async () => {
     const result = await handleNext();
     if (result === "GO_FOUNDATION") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/foundation`);
+      navigate(`${drawingPrefix}/foundation`);
     } else if (result === "GO_COUPLING") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/coupling`);
+      navigate(`${drawingPrefix}/coupling`);
     } else if (result === "GO_SURFACE") {
-      navigate(`/projects/${projectType}/${draftId}/drawing/surface`);
+      navigate(`${drawingPrefix}/surface`);
     }
   };
 
   const onBack = () => {
     const general = JSON.parse(sessionStorage.getItem(`${projectType}_drawing_general`) || "{}");
     if (general?.additionalComponents?.opening) {
-      navigate(`/projects/${projectType}/${draftId}/drawing/opening`);
+      navigate(`${drawingPrefix}/opening`);
     } else {
-      navigate(`/projects/${projectType}/${draftId}/drawing/pole`);
+      navigate(`${drawingPrefix}/pole`);
     }
   };
 
