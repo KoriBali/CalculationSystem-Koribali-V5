@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { projectTypeLabel } from "../constants/projectTypes";
 import { ConfirmResetAllModal } from "../components/modals/ConfirmResetAllModal";
-import { ToastModal } from "../components/modals/ToastModal";
 
 // Reusable section title with left accent bar
 const SectionTitle = ({ children }) => (
@@ -113,7 +112,6 @@ export default function ProjectToolsSetupPage() {
   });
 
   const [showResetModal, setShowResetModal] = useState(false);
-  const [toast, setToast] = useState(null);
 
   // Auto-sync selection changes to sessionStorage
   useEffect(() => {
@@ -149,11 +147,6 @@ export default function ProjectToolsSetupPage() {
     setWorkType("calculation");
     setDesignType("standard");
     setShowResetModal(false);
-    setToast({
-      type: "success",
-      title: "Reset Successful",
-      message: "Setup options have been restored to default values.",
-    });
   };
 
   const handleNextInitial = () => {
@@ -173,13 +166,6 @@ export default function ProjectToolsSetupPage() {
           foundationEnabled: false,
         })
       );
-
-      setToast({
-        type: "success",
-        title: "Setup Saved",
-        message: `Saved: ${workType === "calculation" ? "Calculation" : "Drawing"} · ${designType === "standard" ? "Standard Type" : "Custom Type"
-          }. Session storage ready.`,
-      });
     } catch (err) {
       console.error("Failed to save setup:", err);
     }
@@ -306,8 +292,6 @@ export default function ProjectToolsSetupPage() {
         title="Reset all inputs on this section?"
         description="This will clear all inputs entered in this section. This action cannot be undone."
       />
-
-      <ToastModal toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
