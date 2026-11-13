@@ -174,32 +174,30 @@ export default function ProjectToolsSetupPage() {
   const projectTitle = projectTypeLabel(projectType);
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
+    <div className="flex flex-col h-full">
       <Helmet>
         <title>Setup — {projectTitle} · Project Tools</title>
       </Helmet>
 
-      {/* ─── TOP BLUE BANNER (Clean single block without white tabs) ─── */}
-      <div className="w-full max-w-[1440px] mx-auto px-2 pt-2 sm:pt-4 mb-4 sm:mb-6">
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] shadow-sm px-4 py-3.5 sm:px-6 sm:py-4 flex items-center justify-between">
+      <div className="w-full max-w-[1440px] mx-auto pt-0 pb-24 sm:pb-8 px-2 space-y-6 md:space-y-8">
+        {/* ─── TOP BLUE BANNER (Clean single block without white tabs) ─── */}
+        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] shadow-sm px-3 py-3 sm:px-4 sm:py-4 md:px-6 2xl:px-8 flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate("/project-tools")}
-            className="flex items-center justify-center gap-2 text-white px-3.5 py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium border border-white/20 hover:bg-white/10 active:bg-white/15 transition-all shadow-xs"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 min-w-0 max-w-full text-white px-3 py-2 sm:px-4 rounded-lg hp:rounded-md text-xs sm:text-sm font-medium border border-white/20 hover:bg-white/10 active:bg-white/15 transition shadow-xs"
           >
             <ChevronLeft className="w-4 h-4 shrink-0" />
-            <span>Back to project type</span>
+            <span className="truncate">Back to project type</span>
           </button>
 
           <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:inline">
             {projectTitle}
           </span>
         </div>
-      </div>
 
-      {/* ─── FORM CONTAINER ─── */}
-      <div className="w-full max-w-[1440px] mx-auto pb-24 sm:pb-8 px-2">
-        <div className="bg-white rounded-2xl hp:rounded-xl border border-gray-200 shadow-[0_2px_10px_rgba(15,23,42,0.06)] overflow-hidden">
+        {/* ─── FORM CONTAINER ─── */}
+        <div className="bg-white rounded-2xl hp:rounded-xl border border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.06)] overflow-hidden">
           {/* Top accent strip */}
           <div
             aria-hidden="true"
