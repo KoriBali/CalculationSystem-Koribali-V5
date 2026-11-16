@@ -66,18 +66,10 @@ export default function LightingPoleReportContent({
               <p className="cover-inner-text cover-inner-text-line text-center py-[7px] min-h-[36px] jp">
                 {cover?.projectName || cover?.title1 || <>&nbsp;</>}
               </p>
-              <p
-                className={`cover-inner-text cover-inner-text-line text-center jp min-h-[36px] ${
-                  !(cover?.coverTopText || cover?.title2) ? "py-[19px]" : "py-[7px]"
-                }`}
-              >
+              <p className="cover-inner-text cover-inner-text-line text-center py-[7px] min-h-[36px] jp">
                 {cover?.coverTopText || cover?.title2 || <>&nbsp;</>}
               </p>
-              <p
-                className={`cover-inner-text text-center jp py-[7px] min-h-[36px] ${
-                  !(cover?.coverBottomText || cover?.title3) ? "mb-[24px]" : ""
-                }`}
-              >
+              <p className="cover-inner-text text-center py-[7px] min-h-[36px] jp">
                 {cover?.coverBottomText || cover?.title3 || <>&nbsp;</>}
               </p>
             </div>
@@ -129,7 +121,7 @@ export default function LightingPoleReportContent({
                 :
               </span>
               <span className="page1-text">
-                V = {formatRawVal(officialReport?.designWindSpeedMS ?? condition?.designWindSpeed)} m/s
+                V = {formatRawVal(officialReport?.designWindSpeedMS ?? condition?.designWindSpeed ?? condition?.windSpeed ?? 60)} m/s
               </span>
             </div>
 
@@ -155,14 +147,16 @@ export default function LightingPoleReportContent({
                   </span>
                   <span className="jp tracking-[0.1em] mr-[3px]">空気密度</span>
                   <span>
-                    ρ = {formatRawVal(condition?.designAirDensity)} N・sec<sup>2</sup>/m
+                    ρ = {formatRawVal(condition?.designAirDensity ?? condition?.airDensity ?? 1.23)} N・sec<sup>2</sup>/m
                     <sup>4</sup>
                   </span>
                 </div>
                 <div className="ml-[19px]">
                   q = 1/2・ρ・V<sup>2</sup> ={" "}
                   {toFixed1(
-                    officialReport?.windPressureNM2 ?? condition?.windPressureNM2
+                    officialReport?.windPressureNM2 ??
+                      condition?.windPressureNM2 ??
+                      (0.5 * Number(condition?.designAirDensity || condition?.airDensity || 1.23) * Math.pow(Number(condition?.designWindSpeed || condition?.windSpeed || 60), 2))
                   )}{" "}
                   N/m<sup>2</sup>
                 </div>
@@ -200,7 +194,7 @@ export default function LightingPoleReportContent({
               <div className="flex ml-[44px]">
                 <span className="mr-[4px] tracking-[0.1em]">sfb</span>
                 <span>
-                  = {formatRawVal(officialReport?.allowableStressNMm2 ?? condition?.allowableStressNMm2)} N/mm<sup>2</sup>
+                  = {formatRawVal(officialReport?.allowableStressNMm2 ?? condition?.allowableStressNMm2 ?? 235)} N/mm<sup>2</sup>
                 </span>
               </div>
             </div>

@@ -3,8 +3,20 @@ import {
   calculateCase,
   calculateProjectToolsPole,
 } from "../../services/requestService";
+import {
+  resolveDesignStandardId,
+  mapCalculationOverheadWires,
+  mapCalculationArms,
+} from "../../utils/requestPayloadMapper";
+import { getMasterDesignStandards } from "../../services/masterDataService";
 
-function transformBackendCalculationResult(res, poles, directObjects) {
+function transformBackendCalculationResult(
+  res,
+  poles,
+  directObjects,
+  overheadWires = [],
+  arms = [],
+) {
   if (
     !res ||
     (!res.status &&
@@ -74,8 +86,8 @@ function transformBackendCalculationResult(res, poles, directObjects) {
   return {
     results: mappedResults,
     resultsDo: directObjects || [],
-    resultsOhw: [],
-    resultsArm: [],
+    resultsOhw: overheadWires || [],
+    resultsArm: arms || [],
     display: {
       ...resolvedDisplay,
       positions: posList,
@@ -168,13 +180,24 @@ export async function executePoleCalculation({
       };
     });
 
+    const calcOverheadWires = mapCalculationOverheadWires(overheadWires);
+    const calcArms = mapCalculationArms(arms);
+
     try {
       const res = await calculateCase(resolvedRequestId, caseId, {
         poleStandardHeightId: taperPoleStandard.poleStandardHeightId,
         directObjects: calcDirectObjects,
+        overheadWires: calcOverheadWires,
+        arms: calcArms,
       });
 
-      const parsed = transformBackendCalculationResult(res, poles, directObjects);
+      const parsed = transformBackendCalculationResult(
+        res,
+        poles,
+        directObjects,
+        overheadWires,
+        arms,
+      );
       if (parsed) return parsed;
     } catch (apiErr) {
       throw formatCalculationError(apiErr);
@@ -192,12 +215,19 @@ export async function executePoleCalculation({
         std === "jil") &&
       !std.includes("new");
 
-    // Resolve designStandardId
+    // Resolve designStandardId — async fetch from master data, no hardcoded UUIDs
     let designStandardId = condition?.designStandardId;
     if (!designStandardId) {
-      designStandardId = isOldJil
-        ? "9cd7147f-9e87-4bf6-a467-14dac98151c3" // Old Lighting Pole
-        : "c2d472ca-1eca-48fb-998b-076c18eda43e"; // New JIL
+      const standardsList = await getMasterDesignStandards();
+      designStandardId = resolveDesignStandardId(
+        condition?.designStandard || condition?.standard,
+        standardsList,
+      );
+    }
+    if (!designStandardId) {
+      throw new Error(
+        "Design standard could not be resolved. Please ensure master data is loaded or re-select the standard from the Initial step.",
+      );
     }
 
     const calcDirectObjects = (directObjects || []).map((d) => {
@@ -223,6 +253,9 @@ export async function executePoleCalculation({
           ? "under_gl"
           : "on_gl";
 
+    const calcOverheadWires = mapCalculationOverheadWires(overheadWires);
+    const calcArms = mapCalculationArms(arms);
+
     const sessionPayload = {
       conditions: {
         designStandardId,
@@ -238,8 +271,8 @@ export async function executePoleCalculation({
       input: {
         poleStandardHeightId: taperPoleStandard.poleStandardHeightId,
         directObjects: calcDirectObjects,
-        overheadWires: [],
-        arms: [],
+        overheadWires: calcOverheadWires,
+        arms: calcArms,
         groundPosition,
         embedmentLengthMm:
           taperPoleStandard?.installationPole === "embedment" && taperPoleStandard?.embedmentLength
@@ -250,7 +283,13 @@ export async function executePoleCalculation({
 
     try {
       const res = await calculateProjectToolsPole(sessionPayload);
-      const parsed = transformBackendCalculationResult(res, poles, directObjects);
+      const parsed = transformBackendCalculationResult(
+        res,
+        poles,
+        directObjects,
+        overheadWires,
+        arms,
+      );
       if (parsed) return parsed;
     } catch (apiErr) {
       throw formatCalculationError(apiErr);

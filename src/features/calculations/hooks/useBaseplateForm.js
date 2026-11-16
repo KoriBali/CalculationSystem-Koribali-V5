@@ -62,20 +62,20 @@ export function useBaseplateForm() {
     isStandard
       ? STANDARD_FOUR_RIB_TYPE
       : {
-          bpWidthEW: "",
-          bpWidthNS: "",
-          anchorPitchEW: "",
-          anchorPitchNS: "",
-          anchorDia: "",
-          anchorCount: "",
-          anchorCountTension: "",
-          bpThickness: "",
-          ribHeight: "",
-          ribScallop: "",
-          weldLeg: "",
-          ribLength: "",
-          ribThickness: "",
-        },
+        bpWidthEW: "",
+        bpWidthNS: "",
+        anchorPitchEW: "",
+        anchorPitchNS: "",
+        anchorDia: "",
+        anchorCount: "",
+        anchorCountTension: "",
+        bpThickness: "",
+        ribHeight: "",
+        ribScallop: "",
+        weldLeg: "",
+        ribLength: "",
+        ribThickness: "",
+      },
   );
 
   // Auto-select 4 Rib and auto-fill defaults for Standard Pole
@@ -257,7 +257,7 @@ export function useBaseplateForm() {
       setBaseplateTypeErrors(validation.typeErrors || {});
       setFourRibTypeErrors(validation.fourRibTypeErrors || {});
       setEightRibTypeErrors(validation.eightRibTypeErrors || {});
-      
+
       const firstErrors =
         validation.typeErrors || validation.fourRibTypeErrors || validation.eightRibTypeErrors || {};
       showToast(firstErrorMessage(firstErrors) || validation.message);

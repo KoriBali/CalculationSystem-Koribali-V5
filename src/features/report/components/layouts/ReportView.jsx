@@ -47,7 +47,14 @@ import { ToastModal } from "../../../calculations/components/modals/ToastModal";
 import { useReadOnly } from "../../../calculations/contexts/ReadOnlyContext";
 import { getUser } from "../../../../utils/auth";
 import { findRequestOfCase } from "../../../calculations/data/requestStore";
-import { resolveDesignStandardCode } from "../../../calculations/utils/requestPayloadMapper";
+import {
+  resolveDesignStandardCode,
+  resolveDesignStandardId,
+  mapCalculationOverheadWires,
+  mapCalculationArms,
+} from "../../../calculations/utils/requestPayloadMapper";
+import { getMasterDesignStandards } from "../../../calculations/services/masterDataService";
+import STANDARD_POLE_DATA from "../../../calculations/data/specStandardPole.json";
 import {
   getCaseRuns,
   getCaseRunReport,
@@ -57,6 +64,7 @@ import {
   buildReportHeaderPayload,
   normalizeReportHeaderResponse,
   getCalculationDraft,
+  previewProjectToolsReport,
 } from "../../../calculations/services/requestService";
 import { ReportLoadingModal } from "../modals/ReportLoadingModal";
 import { ReportErrorModal } from "../modals/ReportErrorModal";
@@ -152,7 +160,129 @@ export function ReportView() {
       if (hasFetchedRef.current && !isRetry) {
         return;
       }
-      if (!draftId) return;
+      if (!draftId) {
+        if (isProjectTools) {
+          try {
+            hasFetchedRef.current = true;
+            setIsLoadingReport(true);
+            setReportError(null);
+
+            const storedCond = JSON.parse(
+              sessionStorage.getItem(`${projectType}_condition`) || "{}"
+            );
+            const storedTaper = JSON.parse(
+              sessionStorage.getItem(`${projectType}_taperPoleStandard`) || "{}"
+            );
+            const poleHeightId = storedTaper?.poleStandardHeightId;
+            if (poleHeightId) {
+              const std = String(storedCond?.designStandard || storedCond?.standard || "").toLowerCase();
+              const isOldJil =
+                (std.includes("jil") ||
+                  std.includes("lighting") ||
+                  std === "old_lighting_pole" ||
+                  std === "old_jil" ||
+                  std === "jil") &&
+                !std.includes("new");
+
+              let designStandardId = storedCond?.designStandardId;
+              if (!designStandardId) {
+                const standardsList = await getMasterDesignStandards();
+                designStandardId = resolveDesignStandardId(
+                  storedCond?.designStandard || storedCond?.standard,
+                  standardsList,
+                );
+              }
+              if (!designStandardId) {
+                console.warn("[ReportView] Could not resolve designStandardId from master data.");
+                return;
+              }
+
+              const groundPosition =
+                storedTaper?.installationPole === "embedment" || storedCond?.groundPosition === "embedment"
+                  ? "embedment"
+                  : storedTaper?.groundPosition === "underGL" || storedTaper?.groundPosition === "under_gl"
+                    ? "under_gl"
+                    : "on_gl";
+
+              const rawDoList = JSON.parse(
+                sessionStorage.getItem(`${projectType}_directObjects`) || "[]"
+              );
+              const calcDirectObjects = (Array.isArray(rawDoList) ? rawDoList : []).map((d) => {
+                const rawH = Number(d.zHeight || 8000);
+                const elevationM = rawH > 100 ? rawH / 1000 : rawH;
+                return {
+                  name: d.name || "灯具",
+                  objectKind: isOldJil ? "omni" : (d.type || "omni"),
+                  frontAreaM2: Number(d.frontArea || 0.1),
+                  sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
+                  fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
+                  massPerUnitKg: Number(d.weight || 14),
+                  elevationM,
+                  baseWindCoefficient: Number(d.nnC || d.baseWindCoefficient || 1.0),
+                  quantity: Number(d.quantity || 1),
+                };
+              });
+
+              const rawOhwList = JSON.parse(
+                sessionStorage.getItem(`${projectType}_overheadWires`) || "[]"
+              );
+              const rawArmsList = JSON.parse(
+                sessionStorage.getItem(`${projectType}_arms`) || "[]"
+              );
+
+              const toolPayload = {
+                conditions: {
+                  designStandardId,
+                  designStandard: storedCond.designStandard || storedCond.standard || "standard",
+                  windSpeed: Number(storedCond?.designWindSpeed || storedCond?.windSpeed || 60),
+                  airDensity: Number(storedCond?.designAirDensity || storedCond?.airDensity || 1.23),
+                  horizontalAcceleration: storedCond?.horizontalAcceleration
+                    ? Number(storedCond.horizontalAcceleration)
+                    : null,
+                  responseRatio: storedCond?.responseRatio
+                    ? Number(storedCond.responseRatio)
+                    : null,
+                },
+                input: {
+                  poleStandardHeightId: poleHeightId,
+                  directObjects: calcDirectObjects,
+                  overheadWires: mapCalculationOverheadWires(rawOhwList),
+                  arms: mapCalculationArms(rawArmsList),
+                  groundPosition,
+                  embedmentLengthMm:
+                    (storedTaper?.installationPole === "embedment" || storedCond?.groundPosition === "embedment") && storedTaper?.embedmentLength
+                      ? Number(storedTaper.embedmentLength)
+                      : null,
+                },
+              };
+
+              const rep = await previewProjectToolsReport(toolPayload);
+              const resolvedOfficial = rep?.data || rep;
+              if (resolvedOfficial && (resolvedOfficial.sections || resolvedOfficial.template || resolvedOfficial.geometry)) {
+                setOfficialReportFromApi(resolvedOfficial);
+                try {
+                  const existingSnap = JSON.parse(sessionStorage.getItem(`${projectType}_reportSnapshot`) || "{}");
+                  sessionStorage.setItem(`${projectType}_reportSnapshot`, JSON.stringify({ ...existingSnap, officialReport: resolvedOfficial }));
+                } catch {}
+              } else if (rep) {
+                setOfficialReportFromApi(rep);
+              }
+            }
+          } catch (ptErr) {
+            console.warn("fetchOfficialReport project tools error:", ptErr);
+            const status = ptErr?.response?.status || (ptErr?.response ? "HTTP Error" : "Network Error");
+            setReportError({
+              title: status === 422 ? "Report Validation Failed (HTTP 422)" : "Unable to Load Report",
+              message: ptErr?.response?.data?.message || ptErr?.message || "Failed to load report from server.",
+              details: ptErr?.response?.data || ptErr?.message,
+              status,
+            });
+          } finally {
+            setIsLoadingReport(false);
+          }
+        }
+        return;
+      }
 
       const foundReq = findRequestOfCase(draftId);
       let reqId = foundReq?.request?.id || sessionStorage.getItem("active_request_id");
@@ -331,6 +461,60 @@ export function ReportView() {
 
   const effectiveOfficialReport = reportData?.officialReport || officialReportFromApi;
 
+  // ── Schematic setup (Standard Pole IA, IS, LA, LS, TA, TS & Standard Straight) ──
+  const taperPoleStandard = useMemo(() => {
+    if (reportData?.taperPoleStandard) return reportData.taperPoleStandard;
+    try {
+      return (
+        JSON.parse(
+          sessionStorage.getItem(`${projectType}_taperPoleStandard`) || "null",
+        ) || {}
+      );
+    } catch {
+      return {};
+    }
+  }, [reportData, projectType]);
+
+  const standardSpecPoles = useMemo(() => {
+    try {
+      const dataTaper = STANDARD_POLE_DATA?.tapered || STANDARD_POLE_DATA?.taper || {};
+      const poleType = (taperPoleStandard?.poleType || "IA").toUpperCase();
+      const groundPos = taperPoleStandard?.groundPosition || "onGL";
+      const heightKey = String(taperPoleStandard?.height || "10");
+      const rawH = Number(heightKey);
+      const mH = rawH > 100 ? rawH / 1000 : rawH;
+      const hKey = String(Math.round(mH * 10) / 10);
+      const isTypeWith100 = poleType !== "IS" && poleType !== "IA";
+      const nominalKey = isTypeWith100
+        ? String(Math.round((Number(hKey) - 0.1) * 10) / 10)
+        : String(Math.round((Number(hKey) + 0.1) * 10) / 10);
+
+      const group = dataTaper?.[poleType]?.[groundPos] || {};
+      const selected =
+        group[heightKey] ||
+        group[hKey] ||
+        group[nominalKey] ||
+        dataTaper?.["IA"]?.["onGL"]?.["10"] ||
+        {};
+      return selected?.poles || [];
+    } catch {
+      return [];
+    }
+  }, [taperPoleStandard]);
+
+  const straightPoleStandard = useMemo(() => {
+    if (reportData?.straightPoleStandard) return reportData.straightPoleStandard;
+    try {
+      return (
+        JSON.parse(
+          sessionStorage.getItem(`${projectType}_straightPoleStandard`) || "null",
+        ) || {}
+      );
+    } catch {
+      return {};
+    }
+  }, [reportData, projectType]);
+
   // ── Normalize results to ensure all numeric fields are numbers ──
   const results = useMemo(() => {
     const official = effectiveOfficialReport;
@@ -373,45 +557,61 @@ export function ReportView() {
                 combinedStress: sp.combinedStress,
                 safetyRatio: sp.safetyRatio || sp.safetyFactor,
               }))
-            : reportData?.results || [];
+            : standardSpecPoles && standardSpecPoles.length > (reportData?.results?.length || 0)
+              ? standardSpecPoles.map((sp, idx) => ({
+                  ...(reportData?.results?.[idx] || {}),
+                  ...sp,
+                  lowerDiameter: Number(sp.lowerDiameter || 0),
+                  lowerThickness: Number(sp.lowerThickness || 0),
+                  sectionModulus: Number(sp.sectionModulus || 0),
+                  momentInertia: Number(sp.momentInertia || 0),
+                  radiusGyration: Number(sp.radiusGyration || 0),
+                  sectionArea: Number(sp.sectionArea || 0),
+                  crossSectionArea: Number(sp.sectionArea || 0),
+                  unitWeightKgM: Number(sp.unitWeight || 0),
+                }))
+              : reportData?.results || [];
 
     if (isOldJil) {
       // Untuk Old JIL: Data murni apa adanya dari backend tanpa default angka dummy
+      // Namun bila backend officialReport belum tiba/null, fallback ke spesifikasi standar pole agar tidak blank
       return rawList.map((r, idx) => {
         if (!r) return {};
         const sectionItem = official?.sections?.[idx] || null;
+        const specPole = standardSpecPoles?.[idx] || null;
         return {
           ...r,
-          name: r.name || r.poleName || `Pole ${idx + 1}`,
-          material: r.materialName || r.material || "",
-          lowerDiameter: r.diameterMm ?? r.lowerDiameter,
-          lowerThickness: r.thicknessMm ?? r.lowerThickness,
-          sectionModulus: r.sectionModulusCm3 ?? r.sectionModulus ?? sectionItem?.sectionModulusCm3 ?? null,
-          sectionModulusCm3: r.sectionModulusCm3 ?? sectionItem?.sectionModulusCm3 ?? null,
-          momentInertia: r.momentOfInertiaCm4 ?? r.momentInertia,
-          radiusGyration: r.radiusOfGyrationCm ?? r.radiusGyration,
-          sectionArea: r.crossSectionAreaCm2 ?? r.crossSectionalAreaCm2 ?? r.crossSectionArea ?? r.sectionArea,
-          crossSectionArea: r.crossSectionAreaCm2 ?? r.crossSectionalAreaCm2 ?? r.crossSectionArea ?? r.sectionArea,
-          fixLoad: r.unitWeightKgM ?? r.unitWeight ?? r.fixLoad,
+          name: r.name || r.poleName || sectionItem?.poleName || specPole?.name || `Pole ${idx + 1}`,
+          material: r.materialName || r.material || sectionItem?.materialName || specPole?.material || "STK400",
+          lowerDiameter: r.diameterMm ?? r.lowerDiameter ?? sectionItem?.diameterMm ?? (specPole?.lowerDiameter ? Number(specPole.lowerDiameter) : null),
+          lowerThickness: r.thicknessMm ?? r.lowerThickness ?? sectionItem?.thicknessMm ?? (specPole?.lowerThickness ? Number(specPole.lowerThickness) : null),
+          sectionModulus: r.sectionModulusCm3 ?? r.sectionModulus ?? sectionItem?.sectionModulusCm3 ?? (specPole?.sectionModulus ? Number(specPole.sectionModulus) : null),
+          sectionModulusCm3: r.sectionModulusCm3 ?? sectionItem?.sectionModulusCm3 ?? (specPole?.sectionModulus ? Number(specPole.sectionModulus) : null),
+          momentInertia: r.momentOfInertiaCm4 ?? r.momentInertia ?? (specPole?.momentInertia ? Number(specPole.momentInertia) : null),
+          radiusGyration: r.radiusOfGyrationCm ?? r.radiusGyration ?? (specPole?.radiusGyration ? Number(specPole.radiusGyration) : null),
+          sectionArea: r.crossSectionAreaCm2 ?? r.crossSectionalAreaCm2 ?? r.crossSectionArea ?? r.sectionArea ?? (specPole?.sectionArea ? Number(specPole.sectionArea) : null),
+          crossSectionArea: r.crossSectionAreaCm2 ?? r.crossSectionalAreaCm2 ?? r.crossSectionArea ?? r.sectionArea ?? (specPole?.sectionArea ? Number(specPole.sectionArea) : null),
+          fixLoad: r.unitWeightKgM ?? r.unitWeight ?? r.fixLoad ?? (specPole?.unitWeight ? Number(specPole.unitWeight) : null),
         };
       });
     }
 
     return rawList.map((r, idx) => {
       if (!r) return {};
+      const specPole = standardSpecPoles?.[idx] || null;
       return {
         ...r,
-        lowerDiameter: num(r.lowerDiameter, 165),
-        upperDiameter: num(r.upperDiameter, 75),
-        lowerThickness: num(r.lowerThickness, 4),
-        upperThickness: num(r.upperThickness, 4),
-        sectionModulus: num(r.sectionModulus, 30),
-        sectionArea: num(r.sectionArea, 15),
-        crossSectionArea: num(r.crossSectionArea || r.sectionArea, 15),
-        momentInertia: num(r.momentInertia, 100),
-        radiusGyration: num(r.radiusGyration, 3.5),
-        fixLoad: num(r.fixLoad, 50),
-        zHeight: num(r.zHeight, 10000),
+        lowerDiameter: num(r.lowerDiameter ?? specPole?.lowerDiameter, 165),
+        upperDiameter: num(r.upperDiameter ?? specPole?.upperDiameter, 75),
+        lowerThickness: num(r.lowerThickness ?? specPole?.lowerThickness, 4),
+        upperThickness: num(r.upperThickness ?? specPole?.upperThickness, 4),
+        sectionModulus: num(r.sectionModulus ?? specPole?.sectionModulus, 30),
+        sectionArea: num(r.sectionArea ?? specPole?.sectionArea, 15),
+        crossSectionArea: num(r.crossSectionArea || r.sectionArea || specPole?.sectionArea, 15),
+        momentInertia: num(r.momentInertia ?? specPole?.momentInertia, 100),
+        radiusGyration: num(r.radiusGyration ?? specPole?.radiusGyration, 3.5),
+        fixLoad: num(r.fixLoad ?? specPole?.unitWeight, 50),
+        zHeight: num(r.zHeight ?? specPole?.zHeight, 10000),
         heightSection: num(r.heightSection, 1000),
         fb: num(r.fb, 120),
         stb: num(r.stb, 100),
@@ -424,34 +624,7 @@ export function ReportView() {
         safetyRatio: num(r.safetyRatio, 0.65),
       };
     });
-  }, [reportData, effectiveOfficialReport]);
-
-  // ── Schematic setup (Standard Pole IA, IS, LA, LS, TA, TS & Standard Straight) ──
-  const taperPoleStandard = useMemo(() => {
-    if (reportData?.taperPoleStandard) return reportData.taperPoleStandard;
-    try {
-      return (
-        JSON.parse(
-          sessionStorage.getItem(`${projectType}_taperPoleStandard`) || "null",
-        ) || {}
-      );
-    } catch {
-      return {};
-    }
-  }, [reportData, projectType]);
-
-  const straightPoleStandard = useMemo(() => {
-    if (reportData?.straightPoleStandard) return reportData.straightPoleStandard;
-    try {
-      return (
-        JSON.parse(
-          sessionStorage.getItem(`${projectType}_straightPoleStandard`) || "null",
-        ) || {}
-      );
-    } catch {
-      return {};
-    }
-  }, [reportData, projectType]);
+  }, [reportData, effectiveOfficialReport, standardSpecPoles]);
 
   const resultsDo = useMemo(() => {
     const isCustom =
@@ -863,11 +1036,29 @@ export function ReportView() {
       cover,
       condition: {
         ...condition,
-        windPressureNM2: effectiveOfficialReport?.windPressureNM2,
-        allowableStressNMm2: effectiveOfficialReport?.allowableStressNMm2,
-        ...(effectiveOfficialReport?.designWindSpeedMS
-          ? { designWindSpeed: effectiveOfficialReport.designWindSpeedMS }
-          : {}),
+        designWindSpeed:
+          effectiveOfficialReport?.designWindSpeedMS ??
+          condition?.designWindSpeed ??
+          condition?.windSpeed ??
+          60,
+        designAirDensity:
+          effectiveOfficialReport?.airDensity ??
+          condition?.designAirDensity ??
+          condition?.airDensity ??
+          1.23,
+        windPressureNM2:
+          effectiveOfficialReport?.windPressureNM2 ??
+          condition?.windPressureNM2 ??
+          Math.round(
+            0.5 *
+              Number(condition?.designAirDensity || condition?.airDensity || 1.23) *
+              Math.pow(Number(condition?.designWindSpeed || condition?.windSpeed || 60), 2) *
+              10
+          ) / 10,
+        allowableStressNMm2:
+          effectiveOfficialReport?.allowableStressNMm2 ??
+          condition?.allowableStressNMm2 ??
+          235,
       },
       poleConfig,
       results,

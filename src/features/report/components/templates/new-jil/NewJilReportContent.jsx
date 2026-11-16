@@ -54,20 +54,10 @@ export default function NewJilReportContent({
               <p className="cover-inner-text cover-inner-text-line text-center py-[7px] min-h-[36px] jp">
                 {cover?.projectName || cover?.title1 || <>&nbsp;</>}
               </p>
-              <p
-                className={`cover-inner-text cover-inner-text-line text-center jp min-h-[36px] ${
-                  !(cover?.coverTopText || cover?.title2)
-                    ? "py-[19px]"
-                    : "py-[7px]"
-                }`}
-              >
+              <p className="cover-inner-text cover-inner-text-line text-center py-[7px] min-h-[36px] jp">
                 {cover?.coverTopText || cover?.title2 || <>&nbsp;</>}
               </p>
-              <p
-                className={`cover-inner-text text-center jp py-[7px] min-h-[36px] ${
-                  !(cover?.coverBottomText || cover?.title3) ? "mb-[24px]" : ""
-                }`}
-              >
+              <p className="cover-inner-text text-center py-[7px] min-h-[36px] jp">
                 {cover?.coverBottomText || cover?.title3 || <>&nbsp;</>}
               </p>
             </div>

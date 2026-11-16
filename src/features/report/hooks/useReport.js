@@ -11,6 +11,12 @@ import {
   previewProjectToolsReport,
 } from "../../calculations/services/requestService";
 import { findRequestOfCase } from "../../calculations/data/requestStore";
+import { getMasterDesignStandards } from "../../calculations/services/masterDataService";
+import {
+  resolveDesignStandardId,
+  mapCalculationOverheadWires,
+  mapCalculationArms,
+} from "../../calculations/utils/requestPayloadMapper";
 
 // ─── HOOK ────────────────────────────────────────────────────────────────────
 
@@ -294,31 +300,34 @@ export function useReport(projectType) {
     const calculatedFoundation = read("calculatedFoundation", {});
 
     // Validate all required results based on condition flags
-    const isResultsValid = validateCalculationResults(
-      results,
-      calculatedOp,
-      calculatedBaseplate,
-      calculatedFoundation,
-      liveCondition,
-      showToast,
-    );
-    if (!isResultsValid) {
-      await ensureMinimumWait(400);
-      const missingSteps = [];
-      if (!results?.length) missingSteps.push("Pole Calculation");
-      if (openingEnabled && !hasResult(calculatedOp)) missingSteps.push("Opening Calculation");
-      if (baseplateEnabled && !hasResult(calculatedBaseplate)) missingSteps.push("Baseplate Calculation");
-      if (foundationEnabled && !hasResult(calculatedFoundation)) missingSteps.push("Foundation Calculation");
+    // For Project Tools: skip this validation — no pre-stored results, BE handles calculation directly
+    if (!isProjectTools) {
+      const isResultsValid = validateCalculationResults(
+        results,
+        calculatedOp,
+        calculatedBaseplate,
+        calculatedFoundation,
+        liveCondition,
+        showToast,
+      );
+      if (!isResultsValid) {
+        await ensureMinimumWait(400);
+        const missingSteps = [];
+        if (!results?.length) missingSteps.push("Pole Calculation");
+        if (openingEnabled && !hasResult(calculatedOp)) missingSteps.push("Opening Calculation");
+        if (baseplateEnabled && !hasResult(calculatedBaseplate)) missingSteps.push("Baseplate Calculation");
+        if (foundationEnabled && !hasResult(calculatedFoundation)) missingSteps.push("Foundation Calculation");
 
-      const err = {
-        title: "Incomplete Calculation Steps",
-        message: `Cannot preview report because the following steps have not been calculated: ${missingSteps.join(", ")}. Please complete them first.`,
-        details: { missingSteps, openingEnabled, baseplateEnabled, foundationEnabled },
-        status: "INCOMPLETE_CALCULATION",
-      };
-      setReportError(err);
-      setIsGeneratingReport(false);
-      return false;
+        const err = {
+          title: "Incomplete Calculation Steps",
+          message: `Cannot preview report because the following steps have not been calculated: ${missingSteps.join(", ")}. Please complete them first.`,
+          details: { missingSteps, openingEnabled, baseplateEnabled, foundationEnabled },
+          status: "INCOMPLETE_CALCULATION",
+        };
+        setReportError(err);
+        setIsGeneratingReport(false);
+        return false;
+      }
     }
 
     // Read poleConfig from storage
@@ -409,9 +418,25 @@ export function useReport(projectType) {
           };
         });
 
+        const rawCaseOhw =
+          Array.isArray(resultsOhw) && resultsOhw.length > 0
+            ? resultsOhw
+            : Array.isArray(poleConfig?.overheadWires) && poleConfig.overheadWires.length > 0
+              ? poleConfig.overheadWires
+              : JSON.parse(sessionStorage.getItem(`${projectType}_overheadWires`) || "[]");
+
+        const rawCaseArms =
+          Array.isArray(resultsArm) && resultsArm.length > 0
+            ? resultsArm
+            : Array.isArray(poleConfig?.arms) && poleConfig.arms.length > 0
+              ? poleConfig.arms
+              : JSON.parse(sessionStorage.getItem(`${projectType}_arms`) || "[]");
+
         const runResult = await createCaseRun(reqId, activeDraftId, {
           poleStandardHeightId: poleHeightId,
           directObjects: doList,
+          overheadWires: mapCalculationOverheadWires(rawCaseOhw),
+          arms: mapCalculationArms(rawCaseArms),
         });
 
         const resolvedRunId = runResult?.run?.id || runResult?.id;
@@ -465,6 +490,16 @@ export function useReport(projectType) {
         setIsGeneratingReport(false);
         return false;
       }
+    } else if (isProjectTools && !poleHeightId) {
+      // Project Tools but no pole height selected — cannot generate report
+      setReportError({
+        title: "Pole Configuration Incomplete",
+        message: "Please complete the pole calculation before generating the report.",
+        details: { poleHeightId },
+        status: "INCOMPLETE_CALCULATION",
+      });
+      setIsGeneratingReport(false);
+      return false;
     } else if (isProjectTools && poleHeightId) {
       try {
         const std = String(liveCondition?.designStandard || liveCondition?.standard || "").toLowerCase();
@@ -475,6 +510,21 @@ export function useReport(projectType) {
             std === "old_jil" ||
             std === "jil") &&
           !std.includes("new");
+
+        // Resolve designStandardId — async fetch from master data, no hardcoded UUIDs
+        let designStandardId = liveCondition?.designStandardId;
+        if (!designStandardId) {
+          const standardsList = await getMasterDesignStandards();
+          designStandardId = resolveDesignStandardId(
+            liveCondition?.designStandard || liveCondition?.standard,
+            standardsList,
+          );
+        }
+        if (!designStandardId) {
+          throw new Error(
+            "Design standard could not be resolved. Please ensure master data is loaded or re-select the standard from the Initial step.",
+          );
+        }
 
         const rawDoList =
           Array.isArray(resultsDo) && resultsDo.length > 0
@@ -499,47 +549,102 @@ export function useReport(projectType) {
           };
         });
 
+        const rawOhwList =
+          Array.isArray(resultsOhw) && resultsOhw.length > 0
+            ? resultsOhw
+            : Array.isArray(poleConfig?.overheadWires) && poleConfig.overheadWires.length > 0
+              ? poleConfig.overheadWires
+              : JSON.parse(sessionStorage.getItem(`${projectType}_overheadWires`) || "[]");
+
+        const rawArmsList =
+          Array.isArray(resultsArm) && resultsArm.length > 0
+            ? resultsArm
+            : Array.isArray(poleConfig?.arms) && poleConfig.arms.length > 0
+              ? poleConfig.arms
+              : JSON.parse(sessionStorage.getItem(`${projectType}_arms`) || "[]");
+
+        const calcOverheadWires = mapCalculationOverheadWires(rawOhwList);
+        const calcArms = mapCalculationArms(rawArmsList);
+
         const groundPosition =
-          taperStandard?.groundPosition ||
-          taperStandard?.installationPole ||
-          (liveCondition?.groundPosition === "embedment" ? "embedded" : "onGL");
+          taperStandard?.installationPole === "embedment" || liveCondition?.groundPosition === "embedment"
+            ? "embedment"
+            : taperStandard?.groundPosition === "underGL" || taperStandard?.groundPosition === "under_gl"
+              ? "under_gl"
+              : "on_gl";
 
         const toolPayload = {
           conditions: {
+            designStandardId,
             designStandard:
               liveCondition.designStandard || liveCondition.standard || "standard",
-            windSpeed: Number(liveCondition.windSpeed || 0),
-            airDensity: Number(liveCondition.airDensity || 1.2),
-            roughnessCategory: liveCondition.roughnessCategory || null,
-            importanceFactor: liveCondition.importanceFactor
-              ? Number(liveCondition.importanceFactor)
+            windSpeed: Number(liveCondition?.designWindSpeed || liveCondition?.windSpeed || 60),
+            airDensity: Number(liveCondition?.designAirDensity || liveCondition?.airDensity || 1.23),
+            horizontalAcceleration: liveCondition?.horizontalAcceleration
+              ? Number(liveCondition.horizontalAcceleration)
               : null,
-            responseRatio: liveCondition.responseRatio
+            responseRatio: liveCondition?.responseRatio
               ? Number(liveCondition.responseRatio)
               : null,
           },
           input: {
             poleStandardHeightId: poleHeightId,
             directObjects: calcDirectObjects,
-            overheadWires: [],
-            arms: [],
+            overheadWires: calcOverheadWires,
+            arms: calcArms,
             groundPosition,
             embedmentLengthMm:
-              taperStandard?.installationPole === "embedment" && taperStandard?.embedmentLength
+              (taperStandard?.installationPole === "embedment" || liveCondition?.groundPosition === "embedment") && taperStandard?.embedmentLength
                 ? Number(taperStandard.embedmentLength)
                 : null,
           },
         };
 
-        const rep = await previewProjectToolsReport(toolPayload).catch((err) => {
-          console.warn("previewProjectToolsReport API call error/fallback:", err?.message);
-          return null;
-        });
-        if (rep) {
+        const rep = await previewProjectToolsReport(toolPayload);
+        const resolvedOfficial = rep?.data || rep;
+        if (resolvedOfficial && (resolvedOfficial.sections || resolvedOfficial.template || resolvedOfficial.geometry)) {
+          officialReport = resolvedOfficial;
+        } else if (rep) {
           officialReport = rep;
         }
       } catch (ptErr) {
-        console.warn("Project tools preview report warning:", ptErr);
+        console.error("Project tools preview report error:", ptErr);
+        await ensureMinimumWait(600);
+
+        const status =
+          ptErr?.response?.status ||
+          ptErr?.status ||
+          (ptErr?.response ? "HTTP Error" : "Network Error");
+
+        const respData = ptErr?.response?.data;
+        let detailMessage = "Failed to generate report from the calculation engine server.";
+
+        if (typeof respData?.detail === "string") {
+          detailMessage = respData.detail;
+        } else if (Array.isArray(respData?.detail)) {
+          detailMessage = respData.detail
+            .map(
+              (item) =>
+                `${item?.loc ? item.loc.join(" -> ") : "Parameter"}: ${item?.msg || "invalid"}`,
+            )
+            .join("\n");
+        } else if (respData?.message) {
+          detailMessage = respData.message;
+        } else if (ptErr?.message) {
+          detailMessage = ptErr.message;
+        }
+
+        setReportError({
+          title:
+            status === 422
+              ? "Calculation Validation Failed (HTTP 422)"
+              : "Unable to Generate Report",
+          message: detailMessage,
+          details: respData || ptErr?.message || ptErr,
+          status,
+        });
+        setIsGeneratingReport(false);
+        return false;
       }
     }
 

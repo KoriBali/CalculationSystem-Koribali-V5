@@ -689,3 +689,139 @@ export function buildRequestUpdatePayload({
     coverType,
   };
 }
+
+/**
+ * Maps overhead wires from frontend state to backend OverheadWireInput schema:
+ * - name: string [1, 255]
+ * - massPerLengthKgM: number
+ * - diameterMm: number
+ * - elevationM: number (converted from mm if > 100)
+ * - spanLengthM: number (converted from mm if > 100)
+ * - sagRatioPercent: number
+ * - baseWindCoefficient: number
+ * - fixedAngleDeg: number | null
+ * - verticalAngleDeg: number | null
+ */
+export const mapCalculationOverheadWires = (rawList) => {
+  if (!Array.isArray(rawList) || rawList.length === 0) return [];
+  return rawList
+    .filter((w) => w && (w.name || w.weight != null || w.diameter != null))
+    .map((w, idx) => {
+      const rawH = Number(w.zHeight ?? w.elevationM ?? 0);
+      const elevationM = rawH > 100 ? rawH / 1000 : rawH;
+
+      const rawSpan = Number(w.span ?? w.spanLengthM ?? 0);
+      const spanLengthM = rawSpan > 100 ? rawSpan / 1000 : rawSpan;
+
+      return {
+        name: String(w.name || `Overhead Wire ${idx + 1}`).trim(),
+        massPerLengthKgM: Number(w.weight ?? w.massPerLengthKgM ?? 0),
+        diameterMm: Number(w.diameter ?? w.diameterMm ?? 0),
+        elevationM,
+        spanLengthM,
+        sagRatioPercent: Number(w.saggingRatio ?? w.sagRatioPercent ?? 0),
+        baseWindCoefficient: Number(w.nnC ?? w.baseWindCoefficient ?? 1.0),
+        fixedAngleDeg:
+          w.fixAngle != null && w.fixAngle !== ""
+            ? Number(w.fixAngle)
+            : w.fixedAngleDeg != null && w.fixedAngleDeg !== ""
+              ? Number(w.fixedAngleDeg)
+              : null,
+        verticalAngleDeg:
+          w.verticalAngle != null && w.verticalAngle !== ""
+            ? Number(w.verticalAngle)
+            : w.verticalAngleDeg != null && w.verticalAngleDeg !== ""
+              ? Number(w.verticalAngleDeg)
+              : null,
+      };
+    });
+};
+
+/**
+ * Maps arms and arm objects from frontend state to backend ArmInput schema:
+ * ArmInput:
+ * - name: string [1, 255]
+ * - materialId: string | null
+ * - diameterMm: number
+ * - thicknessMm: number
+ * - totalLengthM: number (converted from mm if > 100)
+ * - exposedLengthM: number (converted from mm if > 100)
+ * - installationHeightM: number (converted from mm if > 100)
+ * - fixedAngleDeg: number (default 0)
+ * - objects: array<ArmObjectInput>
+ *
+ * ArmObjectInput:
+ * - name: string [1, 255]
+ * - objectKind: "omni" | "directional"
+ * - frontAreaM2: number
+ * - sideAreaM2: number | null
+ * - massPerUnitKg: number
+ * - horizontalLoadDistanceM: number (converted from mm if > 100)
+ * - baseWindCoefficient: number
+ * - quantity: integer
+ */
+export const mapCalculationArms = (rawList) => {
+  if (!Array.isArray(rawList) || rawList.length === 0) return [];
+  return rawList
+    .filter((a) => a && (a.name || a.diameter != null || a.length != null))
+    .map((a, idx) => {
+      const rawTotalL = Number(a.length ?? a.totalLengthM ?? 0);
+      const totalLengthM = rawTotalL > 100 ? rawTotalL / 1000 : rawTotalL;
+
+      const rawExpL = Number(a.expLength ?? a.exposedLengthM ?? 0);
+      const exposedLengthM = rawExpL > 100 ? rawExpL / 1000 : rawExpL;
+
+      const rawH = Number(a.zHeight ?? a.installationHeightM ?? 0);
+      const installationHeightM = rawH > 100 ? rawH / 1000 : rawH;
+
+      const rawObjects = Array.isArray(a.objects)
+        ? a.objects
+        : Array.isArray(a.armObjects)
+          ? a.armObjects
+          : [];
+
+      const mappedObjects = rawObjects
+        .filter((ao) => ao && (ao.name || ao.frontArea != null || ao.weight != null))
+        .map((ao, aoIdx) => {
+          const kind =
+            (ao.objectKind || ao.type) === "directional" ? "directional" : "omni";
+          const rawHD = Number(ao.hDistance ?? ao.horizontalLoadDistanceM ?? 0);
+          const horizontalLoadDistanceM = rawHD > 100 ? rawHD / 1000 : rawHD;
+
+          return {
+            name: String(ao.name || `Arm Object ${aoIdx + 1}`).trim(),
+            objectKind: kind,
+            frontAreaM2: Number(ao.frontArea ?? ao.frontAreaM2 ?? 0.1),
+            sideAreaM2:
+              kind === "directional" && (ao.sideArea != null || ao.sideAreaM2 != null)
+                ? Number(ao.sideArea ?? ao.sideAreaM2)
+                : null,
+            massPerUnitKg: Number(ao.weight ?? ao.massPerUnitKg ?? 0),
+            horizontalLoadDistanceM,
+            baseWindCoefficient: Number(ao.nnC ?? ao.baseWindCoefficient ?? 1.0),
+            quantity: Math.max(1, Math.round(Number(ao.quantity || 1))),
+          };
+        });
+
+      return {
+        name: String(a.name || `Arm ${idx + 1}`).trim(),
+        materialId: isUuid(a.materialId)
+          ? a.materialId.trim()
+          : isUuid(a.material)
+            ? a.material.trim()
+            : null,
+        diameterMm: Number(a.diameter ?? a.diameterMm ?? 0),
+        thicknessMm: Number(a.thickness ?? a.thicknessMm ?? 0),
+        totalLengthM,
+        exposedLengthM,
+        installationHeightM,
+        fixedAngleDeg:
+          a.fixAngle != null && a.fixAngle !== ""
+            ? Number(a.fixAngle)
+            : a.fixedAngleDeg != null && a.fixedAngleDeg !== ""
+              ? Number(a.fixedAngleDeg)
+              : 0,
+        objects: mappedObjects,
+      };
+    });
+};
