@@ -568,14 +568,19 @@ export function ReportView() {
       // Namun bila backend officialReport belum tiba/null, fallback ke spesifikasi standar pole agar tidak blank
       return rawList.map((r, idx) => {
         if (!r) return {};
-        const sectionItem = official?.sections?.[idx] || null;
-        const specPole = standardSpecPoles?.[idx] || null;
+        const isArmRow = r.kind === "arm";
+        // For arm rows, specPole/sectionItem lookup is for poles only (by pole index), skip for arms
+        const sectionItem = !isArmRow ? (official?.sections?.[idx] || null) : null;
+        const specPole = !isArmRow ? (standardSpecPoles?.[idx] || null) : null;
         return {
           ...r,
-          name: r.name || r.poleName || sectionItem?.poleName || specPole?.name || `Pole ${idx + 1}`,
+          // Preserve kind so LightingPoleReportContent can split pole vs arm rows
+          kind: r.kind || "pole",
+          name: r.name || r.poleName || sectionItem?.poleName || specPole?.name || (isArmRow ? `アーム-${idx + 1}` : `Pole-${idx + 1}`),
           material: r.materialName || r.material || sectionItem?.materialName || specPole?.material || "STK400",
-          lowerDiameter: r.diameterMm ?? r.lowerDiameter ?? sectionItem?.diameterMm ?? (specPole?.lowerDiameter ? Number(specPole.lowerDiameter) : null),
-          lowerThickness: r.thicknessMm ?? r.lowerThickness ?? sectionItem?.thicknessMm ?? (specPole?.lowerThickness ? Number(specPole.lowerThickness) : null),
+          // Arm rows may use r.diameter / r.thickness (from specStandardPole.json field names)
+          lowerDiameter: r.diameterMm ?? r.lowerDiameter ?? r.diameter ?? sectionItem?.diameterMm ?? (specPole?.lowerDiameter ? Number(specPole.lowerDiameter) : null),
+          lowerThickness: r.thicknessMm ?? r.lowerThickness ?? r.thickness ?? sectionItem?.thicknessMm ?? (specPole?.lowerThickness ? Number(specPole.lowerThickness) : null),
           sectionModulus: r.sectionModulusCm3 ?? r.sectionModulus ?? sectionItem?.sectionModulusCm3 ?? (specPole?.sectionModulus ? Number(specPole.sectionModulus) : null),
           sectionModulusCm3: r.sectionModulusCm3 ?? sectionItem?.sectionModulusCm3 ?? (specPole?.sectionModulus ? Number(specPole.sectionModulus) : null),
           momentInertia: r.momentOfInertiaCm4 ?? r.momentInertia ?? (specPole?.momentInertia ? Number(specPole.momentInertia) : null),

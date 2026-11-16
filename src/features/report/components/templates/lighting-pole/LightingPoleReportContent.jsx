@@ -208,8 +208,16 @@ export default function LightingPoleReportContent({
                 </span>
               </div>
 
-              <div className="ml-[44px] grid grid-cols-[210px_160px] gap-x-[48px] gap-y-[18px] w-fit">
-                {results?.map((r, index) => {
+              {(() => {
+                // Split results into pole rows and arm rows for distinct layout handling
+                const poleRows = results?.filter(
+                  (r) => !r?.kind || r?.kind === "pole"
+                ) ?? [];
+                const armRows = results?.filter(
+                  (r) => r?.kind === "arm"
+                ) ?? [];
+
+                const renderRow = (r, index, isArm = false) => {
                   const wVal = r?.unitWeightKgM ?? r?.unitWeight ?? r?.fixLoad;
                   const iVal = r?.momentOfInertiaCm4 ?? r?.momentInertia;
                   const radVal = r?.radiusOfGyrationCm ?? r?.radiusGyration;
@@ -217,14 +225,20 @@ export default function LightingPoleReportContent({
                     r?.crossSectionalAreaCm2 ??
                     r?.crossSectionArea ??
                     r?.sectionArea;
-                  const diaVal = Number(r?.diameterMm ?? r?.lowerDiameter) || 0;
+                  // Arm rows use r.diameter / r.thickness; pole rows use r.diameterMm / r.lowerDiameter
+                  const rawDia = r?.diameterMm ?? r?.lowerDiameter ?? r?.diameter;
+                  const rawThk = r?.thicknessMm ?? r?.lowerThickness ?? r?.thickness;
+                  const diaVal = Number(rawDia) || 0;
                   const diaCm = diaVal > 0 ? diaVal / 10 : 0;
                   const rawZ =
                     r?.sectionModulusCm3 ??
                     r?.sectionModulus ??
-                    officialReport?.sections?.[index]?.sectionModulusCm3 ??
-                    officialReport?.sections?.[index]?.sectionModulus ??
+                    (!isArm ? (
+                      officialReport?.sections?.[index]?.sectionModulusCm3 ??
+                      officialReport?.sections?.[index]?.sectionModulus
+                    ) : null) ??
                     null;
+                  // Fallback: Z = 2I / D(cm) for circular pipe cross-section
                   const zVal =
                     rawZ != null && rawZ !== ""
                       ? rawZ
@@ -232,20 +246,22 @@ export default function LightingPoleReportContent({
                         ? (2 * Number(iVal)) / diaCm
                         : null;
 
+                  const displayName = r?.name || r?.poleName || (isArm ? `アーム-${index + 1}` : `Pole-${index + 1}`);
+
                   return (
-                    <React.Fragment key={index}>
+                    <React.Fragment key={`${isArm ? "arm" : "pole"}-${index}`}>
                       <div className="flex flex-col">
                         <div className="flex whitespace-nowrap items-baseline">
                           <span className="mr-1 jp tracking-[0.1em]">
-                            {r?.name || r?.poleName || `Pole-${index + 1}`}:
+                            {displayName}:
                           </span>
                           <span className="jp">φ</span>
                           <span className="tracking-[0.05em]">
-                            {formatRawVal(r?.diameterMm ?? r?.lowerDiameter)}
+                            {formatRawVal(rawDia)}
                           </span>
                           <span className="text-[10.5pt] mx-[1.5px]">×</span>
                           <span className="tracking-[0.05em]">
-                            t{formatRawVal(r?.thicknessMm ?? r?.lowerThickness)}
+                            t{formatRawVal(rawThk)}
                           </span>
                         </div>
                         <div className="flex justify-start">
@@ -297,8 +313,23 @@ export default function LightingPoleReportContent({
                       </div>
                     </React.Fragment>
                   );
-                })}
-              </div>
+                };
+
+                return (
+                  <>
+                    {/* Pole rows */}
+                    <div className="ml-[44px] grid grid-cols-[210px_160px] gap-x-[48px] gap-y-[18px] w-fit">
+                      {poleRows.map((r, idx) => renderRow(r, idx, false))}
+                    </div>
+                    {/* Arm rows — separated with top margin */}
+                    {armRows.length > 0 && (
+                      <div className="ml-[44px] mt-[16px] grid grid-cols-[210px_160px] gap-x-[48px] gap-y-[18px] w-fit">
+                        {armRows.map((r, idx) => renderRow(r, idx, true))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
