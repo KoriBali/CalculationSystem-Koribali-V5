@@ -208,14 +208,8 @@ export default function LightingPoleReportContent({
                 </span>
               </div>
 
-              <div className="ml-[44px] grid grid-cols-2 gap-y-[20px] w-[45%]">
+              <div className="ml-[44px] grid grid-cols-[210px_160px] gap-x-[48px] gap-y-[18px] w-fit">
                 {results?.map((r, index) => {
-                  const zVal =
-                    r?.sectionModulusCm3 ??
-                    r?.sectionModulus ??
-                    officialReport?.sections?.[index]?.sectionModulusCm3 ??
-                    officialReport?.sections?.[index]?.sectionModulus ??
-                    null;
                   const wVal = r?.unitWeightKgM ?? r?.unitWeight ?? r?.fixLoad;
                   const iVal = r?.momentOfInertiaCm4 ?? r?.momentInertia;
                   const radVal = r?.radiusOfGyrationCm ?? r?.radiusGyration;
@@ -223,11 +217,25 @@ export default function LightingPoleReportContent({
                     r?.crossSectionalAreaCm2 ??
                     r?.crossSectionArea ??
                     r?.sectionArea;
+                  const diaVal = Number(r?.diameterMm ?? r?.lowerDiameter) || 0;
+                  const diaCm = diaVal > 0 ? diaVal / 10 : 0;
+                  const rawZ =
+                    r?.sectionModulusCm3 ??
+                    r?.sectionModulus ??
+                    officialReport?.sections?.[index]?.sectionModulusCm3 ??
+                    officialReport?.sections?.[index]?.sectionModulus ??
+                    null;
+                  const zVal =
+                    rawZ != null && rawZ !== ""
+                      ? rawZ
+                      : iVal && diaCm > 0
+                        ? (2 * Number(iVal)) / diaCm
+                        : null;
 
                   return (
                     <React.Fragment key={index}>
                       <div className="flex flex-col">
-                        <div className="flex">
+                        <div className="flex whitespace-nowrap items-baseline">
                           <span className="mr-1 jp tracking-[0.1em]">
                             {r?.name || r?.poleName || `Pole-${index + 1}`}:
                           </span>
@@ -265,7 +273,9 @@ export default function LightingPoleReportContent({
                         </div>
                       </div>
                       <div className="flex flex-col">
-                        <div className="flex">{r?.materialName || r?.material || ""}</div>
+                        <div className="flex whitespace-nowrap items-baseline">
+                          {r?.materialName || r?.material || ""}
+                        </div>
                         <div className="flex justify-start">
                           <div className="flex flex-col mr-1">
                             <div>A</div>
@@ -277,8 +287,7 @@ export default function LightingPoleReportContent({
                           </div>
                           <div className="flex flex-col">
                             <div className="tracking-[0.05em]">
-                              {toFixed2(aVal)} cm
-                              <sup>2</sup>
+                              {toFixed2(aVal)} cm<sup>2</sup>
                             </div>
                             <div className="tracking-[0.05em]">
                               {toFixed2(zVal)} cm<sup>3</sup>
