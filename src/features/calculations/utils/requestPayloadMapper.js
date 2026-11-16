@@ -912,7 +912,7 @@ export const mapCalculationArms = (rawList, materialsList = null, isOldJil = fal
 
       return {
         name: String(a.name || `Arm ${idx + 1}`).trim(),
-        materialId: resolvedMatId || "00000000-0000-0000-0000-000000000000",
+        materialId: resolvedMatId || null,
         diameterMm: Number(a.diameter ?? a.diameterMm ?? 0),
         thicknessMm: Number(a.thickness ?? a.thicknessMm ?? 0),
         totalLengthM,

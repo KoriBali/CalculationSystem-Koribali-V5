@@ -7,6 +7,7 @@ import {
   getRequests,
   fetchAllProjectCases,
 } from "../services/requestService";
+import { getCachedMaterials } from "../services/masterDataService";
 import {
   mapCalculationDirectObjects,
   mapCalculationOverheadWires,
@@ -391,7 +392,8 @@ export const buildCalculationDraftPayload = (projectType, sessionData) => {
 
   const directObjects = mapCalculationDirectObjects(rawDo, isOldJil);
   const overheadWires = mapCalculationOverheadWires(rawOhw);
-  const arms = mapCalculationArms(rawArms, null, isOldJil);
+  const materialsList = getCachedMaterials();
+  const arms = mapCalculationArms(rawArms, materialsList, isOldJil);
 
   const rawGp =
     taperStandard?.groundPosition ||

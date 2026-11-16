@@ -79,9 +79,28 @@ export async function getMasterData() {
   return inFlightRequest;
 }
 
+export const STORAGE_KEY_MATERIALS = "masterMaterials";
+
 export function getCachedMaterials() {
+  const specific = readSpecificCache(STORAGE_KEY_MATERIALS);
+  if (Array.isArray(specific) && specific.length > 0) return specific;
   const cached = readCache();
-  return cached?.materials || [];
+  if (Array.isArray(cached?.materials) && cached.materials.length > 0) {
+    writeSpecificCache(STORAGE_KEY_MATERIALS, cached.materials);
+    return cached.materials;
+  }
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const mats = parsed?.data?.materials || parsed?.materials;
+      if (Array.isArray(mats) && mats.length > 0) {
+        writeSpecificCache(STORAGE_KEY_MATERIALS, mats);
+        return mats;
+      }
+    }
+  } catch {}
+  return [];
 }
 
 export async function getMasterMaterials() {
@@ -89,7 +108,11 @@ export async function getMasterMaterials() {
   if (cached && cached.length > 0) return cached;
   try {
     const data = await getMasterData();
-    return data?.materials || [];
+    const mats = data?.materials || [];
+    if (mats.length > 0) {
+      writeSpecificCache(STORAGE_KEY_MATERIALS, mats);
+    }
+    return mats;
   } catch (err) {
     console.warn("[masterDataService] Failed to load master materials:", err);
     return [];
@@ -237,4 +260,5 @@ export function clearMasterDataCache() {
   sessionStorage.removeItem(STORAGE_KEY_STANDARDS);
   sessionStorage.removeItem(STORAGE_KEY_REGIONS);
   sessionStorage.removeItem(STORAGE_KEY_POLE_CATEGORIES);
+  sessionStorage.removeItem(STORAGE_KEY_MATERIALS);
 }
