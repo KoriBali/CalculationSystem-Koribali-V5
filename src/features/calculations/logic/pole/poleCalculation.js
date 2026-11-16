@@ -5,10 +5,14 @@ import {
 } from "../../services/requestService";
 import {
   resolveDesignStandardId,
+  mapCalculationDirectObjects,
   mapCalculationOverheadWires,
   mapCalculationArms,
 } from "../../utils/requestPayloadMapper";
-import { getMasterDesignStandards } from "../../services/masterDataService";
+import {
+  getMasterDesignStandards,
+  getMasterMaterials,
+} from "../../services/masterDataService";
 
 function transformBackendCalculationResult(
   res,
@@ -102,6 +106,13 @@ function formatCalculationError(apiErr) {
   let msg = "Structural calculation failed on the backend server.";
   if (typeof detail === "string") {
     msg = detail;
+  } else if (Array.isArray(detail)) {
+    msg = detail
+      .map(
+        (item) =>
+          `${item?.loc ? item.loc.filter((p) => p !== "body").join(" -> ") : "Parameter"}: ${item?.msg || "invalid"}`,
+      )
+      .join("\n");
   } else if (detail?.reason) {
     const reasonMessages = {
       wind_speed_missing:
@@ -164,24 +175,10 @@ export async function executePoleCalculation({
         std === "jil") &&
       !std.includes("new");
 
-    const calcDirectObjects = (directObjects || []).map((d) => {
-      const rawH = Number(d.zHeight || 8000);
-      const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-      return {
-        name: d.name || "灯具",
-        objectKind: isOldJil ? "omni" : (d.type || "omni"),
-        frontAreaM2: Number(d.frontArea || 0.1),
-        sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
-        fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
-        massPerUnitKg: Number(d.weight || 14),
-        elevationM,
-        baseWindCoefficient: Number(d.nnC || 1.0),
-        quantity: Number(d.quantity || 1),
-      };
-    });
-
+    const calcDirectObjects = mapCalculationDirectObjects(directObjects, isOldJil);
+    const materialsList = await getMasterMaterials();
     const calcOverheadWires = mapCalculationOverheadWires(overheadWires);
-    const calcArms = mapCalculationArms(arms);
+    const calcArms = mapCalculationArms(arms, materialsList, isOldJil);
 
     try {
       const res = await calculateCase(resolvedRequestId, caseId, {
@@ -230,21 +227,7 @@ export async function executePoleCalculation({
       );
     }
 
-    const calcDirectObjects = (directObjects || []).map((d) => {
-      const rawH = Number(d.zHeight || 8000);
-      const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-      return {
-        name: d.name || "灯具",
-        objectKind: isOldJil ? "omni" : (d.type || "omni"),
-        frontAreaM2: Number(d.frontArea || 0.1),
-        sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
-        fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
-        massPerUnitKg: Number(d.weight || 14),
-        elevationM,
-        baseWindCoefficient: Number(d.nnC || 1.0),
-        quantity: Number(d.quantity || 1),
-      };
-    });
+    const calcDirectObjects = mapCalculationDirectObjects(directObjects, isOldJil);
 
     const groundPosition =
       taperPoleStandard?.installationPole === "embedment"
@@ -253,14 +236,15 @@ export async function executePoleCalculation({
           ? "under_gl"
           : "on_gl";
 
+    const materialsList = await getMasterMaterials();
     const calcOverheadWires = mapCalculationOverheadWires(overheadWires);
-    const calcArms = mapCalculationArms(arms);
+    const calcArms = mapCalculationArms(arms, materialsList, isOldJil);
 
     const sessionPayload = {
       conditions: {
         designStandardId,
-        windSpeed: Number(condition?.designWindSpeed || condition?.windSpeed || 60),
-        airDensity: Number(condition?.designAirDensity || condition?.airDensity || 1.23),
+        windSpeed: Number(condition?.designWindSpeed ?? condition?.windSpeed ?? 60),
+        airDensity: Number(condition?.designAirDensity ?? condition?.airDensity ?? 1.23),
         horizontalAcceleration: condition?.horizontalAcceleration
           ? Number(condition.horizontalAcceleration)
           : null,

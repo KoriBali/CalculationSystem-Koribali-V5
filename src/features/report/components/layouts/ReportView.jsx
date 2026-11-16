@@ -50,10 +50,14 @@ import { findRequestOfCase } from "../../../calculations/data/requestStore";
 import {
   resolveDesignStandardCode,
   resolveDesignStandardId,
+  mapCalculationDirectObjects,
   mapCalculationOverheadWires,
   mapCalculationArms,
 } from "../../../calculations/utils/requestPayloadMapper";
-import { getMasterDesignStandards } from "../../../calculations/services/masterDataService";
+import {
+  getMasterDesignStandards,
+  getMasterMaterials,
+} from "../../../calculations/services/masterDataService";
 import STANDARD_POLE_DATA from "../../../calculations/data/specStandardPole.json";
 import {
   getCaseRuns,
@@ -207,21 +211,7 @@ export function ReportView() {
               const rawDoList = JSON.parse(
                 sessionStorage.getItem(`${projectType}_directObjects`) || "[]"
               );
-              const calcDirectObjects = (Array.isArray(rawDoList) ? rawDoList : []).map((d) => {
-                const rawH = Number(d.zHeight || 8000);
-                const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-                return {
-                  name: d.name || "灯具",
-                  objectKind: isOldJil ? "omni" : (d.type || "omni"),
-                  frontAreaM2: Number(d.frontArea || 0.1),
-                  sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
-                  fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
-                  massPerUnitKg: Number(d.weight || 14),
-                  elevationM,
-                  baseWindCoefficient: Number(d.nnC || d.baseWindCoefficient || 1.0),
-                  quantity: Number(d.quantity || 1),
-                };
-              });
+              const calcDirectObjects = mapCalculationDirectObjects(rawDoList, isOldJil);
 
               const rawOhwList = JSON.parse(
                 sessionStorage.getItem(`${projectType}_overheadWires`) || "[]"
@@ -229,13 +219,14 @@ export function ReportView() {
               const rawArmsList = JSON.parse(
                 sessionStorage.getItem(`${projectType}_arms`) || "[]"
               );
+              const materialsList = await getMasterMaterials();
 
               const toolPayload = {
                 conditions: {
                   designStandardId,
                   designStandard: storedCond.designStandard || storedCond.standard || "standard",
-                  windSpeed: Number(storedCond?.designWindSpeed || storedCond?.windSpeed || 60),
-                  airDensity: Number(storedCond?.designAirDensity || storedCond?.airDensity || 1.23),
+                  windSpeed: Number(storedCond?.designWindSpeed ?? storedCond?.windSpeed ?? 60),
+                  airDensity: Number(storedCond?.designAirDensity ?? storedCond?.airDensity ?? 1.23),
                   horizontalAcceleration: storedCond?.horizontalAcceleration
                     ? Number(storedCond.horizontalAcceleration)
                     : null,
@@ -247,7 +238,7 @@ export function ReportView() {
                   poleStandardHeightId: poleHeightId,
                   directObjects: calcDirectObjects,
                   overheadWires: mapCalculationOverheadWires(rawOhwList),
-                  arms: mapCalculationArms(rawArmsList),
+                  arms: mapCalculationArms(rawArmsList, materialsList, isOldJil),
                   groundPosition,
                   embedmentLengthMm:
                     (storedTaper?.installationPole === "embedment" || storedCond?.groundPosition === "embedment") && storedTaper?.embedmentLength
@@ -653,15 +644,15 @@ export function ReportView() {
       .map((d) => {
         return {
           ...d,
-          name: d?.name || "灯具",
-          weight: num(d?.weight, 14),
-          fixLoad: num(d?.fixLoad || d?.weight, 14),
-          frontArea: num(d?.frontArea, 0.1),
-          sideArea: num(d?.sideArea, 0.1),
-          cf: num(d?.cf, 1.1),
-          windLoadAreaFront: num(d?.windLoadAreaFront, 60),
-          windLoadAreaSide: num(d?.windLoadAreaSide, 40),
-          zHeight: num(d?.zHeight, 10000),
+          name: d?.name || "Direct Object",
+          weight: num(d?.weight, 0),
+          fixLoad: num(d?.fixLoad ?? d?.weight, 0),
+          frontArea: num(d?.frontArea, 0),
+          sideArea: num(d?.sideArea, 0),
+          cf: num(d?.cf, 1.0),
+          windLoadAreaFront: num(d?.windLoadAreaFront, 0),
+          windLoadAreaSide: num(d?.windLoadAreaSide, 0),
+          zHeight: num(d?.zHeight, 0),
         };
       });
   }, [reportData, taperPoleStandard]);

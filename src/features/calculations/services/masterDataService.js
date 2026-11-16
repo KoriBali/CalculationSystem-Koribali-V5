@@ -79,6 +79,23 @@ export async function getMasterData() {
   return inFlightRequest;
 }
 
+export function getCachedMaterials() {
+  const cached = readCache();
+  return cached?.materials || [];
+}
+
+export async function getMasterMaterials() {
+  const cached = getCachedMaterials();
+  if (cached && cached.length > 0) return cached;
+  try {
+    const data = await getMasterData();
+    return data?.materials || [];
+  } catch (err) {
+    console.warn("[masterDataService] Failed to load master materials:", err);
+    return [];
+  }
+}
+
 // ─── DYNAMIC DESIGN STANDARDS & REGIONS (ZERO HARDCODED UUID) ─────────────────
 export const STORAGE_KEY_STANDARDS = "masterDesignStandards";
 export const STORAGE_KEY_REGIONS = "masterRegions";

@@ -10,6 +10,7 @@ import {
   getCachedDesignStandards,
   getCachedRegions,
   getCachedPoleCategories,
+  getCachedMaterials,
 } from "../services/masterDataService";
 
 // Dynamic resolver for poleCategoryId from backend master data (zero hardcoded UUIDs)
@@ -691,12 +692,72 @@ export function buildRequestUpdatePayload({
 }
 
 /**
+ * Maps direct objects from frontend state to backend DirectObjectInput schema:
+ * - name: string [1, 255]
+ * - objectKind: "omni" | "directional"
+ * - frontAreaM2: number
+ * - sideAreaM2: number | null
+ * - fixedAngleDeg: number | null
+ * - massPerUnitKg: number
+ * - elevationM: number (converted from mm if > 10)
+ * - baseWindCoefficient: number
+ * - quantity: integer
+ */
+export const mapCalculationDirectObjects = (rawList, isOldJil = false) => {
+  if (!Array.isArray(rawList) || rawList.length === 0) return [];
+  return rawList
+    .filter(
+      (d) =>
+        d &&
+        (d.name ||
+          d.weight != null ||
+          d.frontArea != null ||
+          d.zHeight != null ||
+          d.elevationM != null),
+    )
+    .map((d, idx) => {
+      const rawH = Number(d.zHeight ?? d.elevationM ?? 0);
+      const elevationM = rawH > 10 ? rawH / 1000 : rawH;
+
+      const kind = isOldJil
+        ? "omni"
+        : (d.objectKind || d.type) === "directional"
+          ? "directional"
+          : "omni";
+
+      return {
+        name: String(d.name || `Object ${idx + 1}`).trim(),
+        objectKind: kind,
+        frontAreaM2: Number(d.frontArea ?? d.frontAreaM2 ?? 0),
+        sideAreaM2: isOldJil
+          ? null
+          : d.sideArea != null && d.sideArea !== ""
+            ? Number(d.sideArea)
+            : d.sideAreaM2 != null && d.sideAreaM2 !== ""
+              ? Number(d.sideAreaM2)
+              : null,
+        fixedAngleDeg: isOldJil
+          ? null
+          : d.fixAngle != null && d.fixAngle !== ""
+            ? Number(d.fixAngle)
+            : d.fixedAngleDeg != null && d.fixedAngleDeg !== ""
+              ? Number(d.fixedAngleDeg)
+              : null,
+        massPerUnitKg: Number(d.weight ?? d.massPerUnitKg ?? 0),
+        elevationM,
+        baseWindCoefficient: Number(d.nnC ?? d.baseWindCoefficient ?? 1.0),
+        quantity: Math.max(1, Math.round(Number(d.quantity || 1))),
+      };
+    });
+};
+
+/**
  * Maps overhead wires from frontend state to backend OverheadWireInput schema:
  * - name: string [1, 255]
  * - massPerLengthKgM: number
  * - diameterMm: number
- * - elevationM: number (converted from mm if > 100)
- * - spanLengthM: number (converted from mm if > 100)
+ * - elevationM: number (converted from mm if > 10)
+ * - spanLengthM: number (converted from mm if > 10)
  * - sagRatioPercent: number
  * - baseWindCoefficient: number
  * - fixedAngleDeg: number | null
@@ -708,10 +769,10 @@ export const mapCalculationOverheadWires = (rawList) => {
     .filter((w) => w && (w.name || w.weight != null || w.diameter != null))
     .map((w, idx) => {
       const rawH = Number(w.zHeight ?? w.elevationM ?? 0);
-      const elevationM = rawH > 100 ? rawH / 1000 : rawH;
+      const elevationM = rawH > 10 ? rawH / 1000 : rawH;
 
       const rawSpan = Number(w.span ?? w.spanLengthM ?? 0);
-      const spanLengthM = rawSpan > 100 ? rawSpan / 1000 : rawSpan;
+      const spanLengthM = rawSpan > 10 ? rawSpan / 1000 : rawSpan;
 
       return {
         name: String(w.name || `Overhead Wire ${idx + 1}`).trim(),
@@ -737,16 +798,34 @@ export const mapCalculationOverheadWires = (rawList) => {
     });
 };
 
+// Dynamic resolver for materialId from backend master data
+export const resolveMaterialId = (val, materialsList = null) => {
+  if (!val) return null;
+  if (isUuid(val)) return val.trim();
+  const list =
+    materialsList && materialsList.length > 0
+      ? materialsList
+      : getCachedMaterials();
+  if (!Array.isArray(list) || list.length === 0) return null;
+  const key = String(val).toLowerCase().trim();
+  const found = list.find((m) => {
+    const name = String(m.name || "").toLowerCase().trim();
+    const code = String(m.code || "").toLowerCase().trim();
+    return m.id === val || name === key || code === key || (key.includes("stk") && name.includes("stk"));
+  });
+  return found?.id || list[0]?.id || null;
+};
+
 /**
  * Maps arms and arm objects from frontend state to backend ArmInput schema:
  * ArmInput:
  * - name: string [1, 255]
- * - materialId: string | null
+ * - materialId: string (UUID resolved from master data)
  * - diameterMm: number
  * - thicknessMm: number
- * - totalLengthM: number (converted from mm if > 100)
- * - exposedLengthM: number (converted from mm if > 100)
- * - installationHeightM: number (converted from mm if > 100)
+ * - totalLengthM: number (converted from mm if > 10)
+ * - exposedLengthM: number (converted from mm if > 10)
+ * - installationHeightM: number (converted from mm if > 10)
  * - fixedAngleDeg: number (default 0)
  * - objects: array<ArmObjectInput>
  *
@@ -756,23 +835,23 @@ export const mapCalculationOverheadWires = (rawList) => {
  * - frontAreaM2: number
  * - sideAreaM2: number | null
  * - massPerUnitKg: number
- * - horizontalLoadDistanceM: number (converted from mm if > 100)
+ * - horizontalLoadDistanceM: number (converted from mm if > 10)
  * - baseWindCoefficient: number
  * - quantity: integer
  */
-export const mapCalculationArms = (rawList) => {
+export const mapCalculationArms = (rawList, materialsList = null, isOldJil = false) => {
   if (!Array.isArray(rawList) || rawList.length === 0) return [];
   return rawList
     .filter((a) => a && (a.name || a.diameter != null || a.length != null))
     .map((a, idx) => {
       const rawTotalL = Number(a.length ?? a.totalLengthM ?? 0);
-      const totalLengthM = rawTotalL > 100 ? rawTotalL / 1000 : rawTotalL;
+      const totalLengthM = rawTotalL > 10 ? rawTotalL / 1000 : rawTotalL;
 
       const rawExpL = Number(a.expLength ?? a.exposedLengthM ?? 0);
-      const exposedLengthM = rawExpL > 100 ? rawExpL / 1000 : rawExpL;
+      const exposedLengthM = rawExpL > 10 ? rawExpL / 1000 : rawExpL;
 
       const rawH = Number(a.zHeight ?? a.installationHeightM ?? 0);
-      const installationHeightM = rawH > 100 ? rawH / 1000 : rawH;
+      const installationHeightM = rawH > 10 ? rawH / 1000 : rawH;
 
       const rawObjects = Array.isArray(a.objects)
         ? a.objects
@@ -783,19 +862,42 @@ export const mapCalculationArms = (rawList) => {
       const mappedObjects = rawObjects
         .filter((ao) => ao && (ao.name || ao.frontArea != null || ao.weight != null))
         .map((ao, aoIdx) => {
-          const kind =
+          const rawKind =
             (ao.objectKind || ao.type) === "directional" ? "directional" : "omni";
-          const rawHD = Number(ao.hDistance ?? ao.horizontalLoadDistanceM ?? 0);
-          const horizontalLoadDistanceM = rawHD > 100 ? rawHD / 1000 : rawHD;
+          const kind = isOldJil ? "omni" : rawKind;
+          let rawHD =
+            ao.hDistance != null && ao.hDistance !== ""
+              ? Number(ao.hDistance)
+              : ao.horizontalLoadDistanceM != null && ao.horizontalLoadDistanceM !== ""
+                ? Number(ao.horizontalLoadDistanceM)
+                : null;
+
+          if (rawHD == null) {
+            const aoZ = Number(ao.zHeight || 0);
+            const armZ = Number(a.zHeight || 0);
+            // In standard pole specs (e.g. specStandardPole.json), the arm object's 180 mm
+            // is stored under zHeight but represents the hDistance (load distance along the arm),
+            // because the true vertical zHeight of the object is the arm's installation height.
+            if (aoZ > 0 && Math.abs(aoZ - armZ) > 10) {
+              rawHD = aoZ;
+            } else {
+              rawHD = Number(a.expLength ?? a.length ?? 0);
+            }
+          }
+
+          const horizontalLoadDistanceM =
+            rawHD > 10 ? rawHD / 1000 : rawHD > 0 ? rawHD : totalLengthM || 0.1;
 
           return {
             name: String(ao.name || `Arm Object ${aoIdx + 1}`).trim(),
             objectKind: kind,
-            frontAreaM2: Number(ao.frontArea ?? ao.frontAreaM2 ?? 0.1),
+            frontAreaM2: Number(ao.frontArea ?? ao.frontAreaM2 ?? 0),
             sideAreaM2:
-              kind === "directional" && (ao.sideArea != null || ao.sideAreaM2 != null)
-                ? Number(ao.sideArea ?? ao.sideAreaM2)
-                : null,
+              isOldJil
+                ? null
+                : kind === "directional" && (ao.sideArea != null || ao.sideAreaM2 != null)
+                  ? Number(ao.sideArea ?? ao.sideAreaM2)
+                  : null,
             massPerUnitKg: Number(ao.weight ?? ao.massPerUnitKg ?? 0),
             horizontalLoadDistanceM,
             baseWindCoefficient: Number(ao.nnC ?? ao.baseWindCoefficient ?? 1.0),
@@ -803,13 +905,14 @@ export const mapCalculationArms = (rawList) => {
           };
         });
 
+      const resolvedMatId = resolveMaterialId(
+        a.materialId || a.material,
+        materialsList,
+      );
+
       return {
         name: String(a.name || `Arm ${idx + 1}`).trim(),
-        materialId: isUuid(a.materialId)
-          ? a.materialId.trim()
-          : isUuid(a.material)
-            ? a.material.trim()
-            : null,
+        materialId: resolvedMatId || "00000000-0000-0000-0000-000000000000",
         diameterMm: Number(a.diameter ?? a.diameterMm ?? 0),
         thicknessMm: Number(a.thickness ?? a.thicknessMm ?? 0),
         totalLengthM,

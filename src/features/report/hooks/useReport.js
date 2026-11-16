@@ -11,9 +11,13 @@ import {
   previewProjectToolsReport,
 } from "../../calculations/services/requestService";
 import { findRequestOfCase } from "../../calculations/data/requestStore";
-import { getMasterDesignStandards } from "../../calculations/services/masterDataService";
+import {
+  getMasterDesignStandards,
+  getMasterMaterials,
+} from "../../calculations/services/masterDataService";
 import {
   resolveDesignStandardId,
+  mapCalculationDirectObjects,
   mapCalculationOverheadWires,
   mapCalculationArms,
 } from "../../calculations/utils/requestPayloadMapper";
@@ -402,21 +406,7 @@ export function useReport(projectType) {
               ? poleConfig.directObjects
               : [];
 
-        const doList = rawDoList.map((d) => {
-          const rawH = Number(d.zHeight || 8000);
-          const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-          return {
-            name: d.name || "灯具",
-            objectKind: isOldJil ? "omni" : (d.type || "omni"),
-            frontAreaM2: Number(d.frontArea || 0.1),
-            sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
-            fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
-            massPerUnitKg: Number(d.weight || 14),
-            elevationM,
-            baseWindCoefficient: Number(d.nnC || d.baseWindCoefficient || 1.0),
-            quantity: Number(d.quantity || 1),
-          };
-        });
+        const doList = mapCalculationDirectObjects(rawDoList, isOldJil);
 
         const rawCaseOhw =
           Array.isArray(resultsOhw) && resultsOhw.length > 0
@@ -432,11 +422,12 @@ export function useReport(projectType) {
               ? poleConfig.arms
               : JSON.parse(sessionStorage.getItem(`${projectType}_arms`) || "[]");
 
+        const materialsList = await getMasterMaterials();
         const runResult = await createCaseRun(reqId, activeDraftId, {
           poleStandardHeightId: poleHeightId,
           directObjects: doList,
           overheadWires: mapCalculationOverheadWires(rawCaseOhw),
-          arms: mapCalculationArms(rawCaseArms),
+          arms: mapCalculationArms(rawCaseArms, materialsList, isOldJil),
         });
 
         const resolvedRunId = runResult?.run?.id || runResult?.id;
@@ -533,21 +524,7 @@ export function useReport(projectType) {
               ? poleConfig.directObjects
               : [];
 
-        const calcDirectObjects = rawDoList.map((d) => {
-          const rawH = Number(d.zHeight || 8000);
-          const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-          return {
-            name: d.name || "灯具",
-            objectKind: isOldJil ? "omni" : (d.type || "omni"),
-            frontAreaM2: Number(d.frontArea || 0.1),
-            sideAreaM2: isOldJil ? null : (d.sideArea != null ? Number(d.sideArea) : null),
-            fixedAngleDeg: isOldJil ? null : (d.fixAngle != null ? Number(d.fixAngle) : null),
-            massPerUnitKg: Number(d.weight || 14),
-            elevationM,
-            baseWindCoefficient: Number(d.nnC || d.baseWindCoefficient || 1.0),
-            quantity: Number(d.quantity || 1),
-          };
-        });
+        const calcDirectObjects = mapCalculationDirectObjects(rawDoList, isOldJil);
 
         const rawOhwList =
           Array.isArray(resultsOhw) && resultsOhw.length > 0
@@ -563,8 +540,9 @@ export function useReport(projectType) {
               ? poleConfig.arms
               : JSON.parse(sessionStorage.getItem(`${projectType}_arms`) || "[]");
 
+        const materialsList = await getMasterMaterials();
         const calcOverheadWires = mapCalculationOverheadWires(rawOhwList);
-        const calcArms = mapCalculationArms(rawArmsList);
+        const calcArms = mapCalculationArms(rawArmsList, materialsList, isOldJil);
 
         const groundPosition =
           taperStandard?.installationPole === "embedment" || liveCondition?.groundPosition === "embedment"
@@ -578,8 +556,8 @@ export function useReport(projectType) {
             designStandardId,
             designStandard:
               liveCondition.designStandard || liveCondition.standard || "standard",
-            windSpeed: Number(liveCondition?.designWindSpeed || liveCondition?.windSpeed || 60),
-            airDensity: Number(liveCondition?.designAirDensity || liveCondition?.airDensity || 1.23),
+            windSpeed: Number(liveCondition?.designWindSpeed ?? liveCondition?.windSpeed ?? 60),
+            airDensity: Number(liveCondition?.designAirDensity ?? liveCondition?.airDensity ?? 1.23),
             horizontalAcceleration: liveCondition?.horizontalAcceleration
               ? Number(liveCondition.horizontalAcceleration)
               : null,

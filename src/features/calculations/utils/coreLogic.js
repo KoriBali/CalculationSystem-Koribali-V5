@@ -7,6 +7,11 @@ import {
   getRequests,
   fetchAllProjectCases,
 } from "../services/requestService";
+import {
+  mapCalculationDirectObjects,
+  mapCalculationOverheadWires,
+  mapCalculationArms,
+} from "./requestPayloadMapper";
 
 /**
  * Resolves the request ID owning a specific case, checking session storage, local store, and backend API.
@@ -374,58 +379,19 @@ export const buildCalculationDraftPayload = (projectType, sessionData) => {
     } catch {}
   }
 
-  const directObjects = (Array.isArray(rawDo) ? rawDo : []).map((d) => {
-    const rawH = Number(d.zHeight || 8000);
-    const elevationM = rawH > 100 ? rawH / 1000 : rawH;
-    return {
-      name: d.name || "灯具",
-      objectKind: d.type === "directional" ? "directional" : "omni",
-      frontAreaM2: Number(d.frontArea || 0.1),
-      sideAreaM2:
-        d.sideArea != null && d.sideArea !== "" ? Number(d.sideArea) : null,
-      fixedAngleDeg:
-        d.fixAngle != null && d.fixAngle !== "" ? Number(d.fixAngle) : null,
-      massPerUnitKg: Number(d.weight || 14),
-      elevationM,
-      baseWindCoefficient: Number(d.nnC || 1.0),
-      quantity: Number(d.quantity || 1),
-    };
-  });
+  const condition = getParsed("condition");
+  const std = String(condition?.designStandard || condition?.standard || "").toLowerCase();
+  const isOldJil =
+    (std.includes("jil") ||
+      std.includes("lighting") ||
+      std === "old_lighting_pole" ||
+      std === "old_jil" ||
+      std === "jil") &&
+    !std.includes("new");
 
-  const overheadWires = (Array.isArray(rawOhw) ? rawOhw : []).map((w) => ({
-    name: w.name || "Overhead Wire",
-    massPerLengthKgM: Number(w.weightPerM || w.massPerLengthKgM || 0),
-    diameterMm: Number(w.diameterMm || 0),
-    elevationM: Number(
-      w.elevationM || (w.zHeight ? Number(w.zHeight) / 1000 : 0)
-    ),
-    spanLengthM: Number(w.spanLengthM || 0),
-    sagRatioPercent: Number(w.sagRatioPercent || 0),
-    baseWindCoefficient: Number(w.baseWindCoefficient || 1.0),
-    fixedAngleDeg:
-      w.fixedAngleDeg != null && w.fixedAngleDeg !== ""
-        ? Number(w.fixedAngleDeg)
-        : null,
-    verticalAngleDeg:
-      w.verticalAngleDeg != null && w.verticalAngleDeg !== ""
-        ? Number(w.verticalAngleDeg)
-        : null,
-  }));
-
-  const arms = (Array.isArray(rawArms) ? rawArms : []).map((a) => ({
-    name: a.name || "Arm",
-    materialId: a.materialId || null,
-    diameterMm: Number(a.diameterMm || 0),
-    thicknessMm: Number(a.thicknessMm || 0),
-    totalLengthM: Number(a.totalLengthM || 0),
-    exposedLengthM: Number(a.exposedLengthM || 0),
-    installationHeightM: Number(a.installationHeightM || 0),
-    fixedAngleDeg:
-      a.fixedAngleDeg != null && a.fixedAngleDeg !== ""
-        ? Number(a.fixedAngleDeg)
-        : null,
-    objects: Array.isArray(a.objects) ? a.objects : [],
-  }));
+  const directObjects = mapCalculationDirectObjects(rawDo, isOldJil);
+  const overheadWires = mapCalculationOverheadWires(rawOhw);
+  const arms = mapCalculationArms(rawArms, null, isOldJil);
 
   const rawGp =
     taperStandard?.groundPosition ||
@@ -629,12 +595,12 @@ export const deserializeWorkingSession = (projectType, draftData) => {
       ) {
         const uiDo = rawData.directObjects.map((d, idx) => ({
           id: `do_${idx + 1}`,
-          name: d.name || "灯具",
+          name: d.name || `Object ${idx + 1}`,
           type: d.objectKind === "directional" ? "directional" : "omni",
-          frontArea: d.frontAreaM2 != null ? String(d.frontAreaM2) : "0.1",
+          frontArea: d.frontAreaM2 != null ? String(d.frontAreaM2) : "",
           sideArea: d.sideAreaM2 != null ? String(d.sideAreaM2) : "",
           fixAngle: d.fixedAngleDeg != null ? String(d.fixedAngleDeg) : "",
-          weight: d.massPerUnitKg != null ? String(d.massPerUnitKg) : "14",
+          weight: d.massPerUnitKg != null ? String(d.massPerUnitKg) : "",
           zHeight:
             d.elevationM != null
               ? String(
@@ -642,7 +608,7 @@ export const deserializeWorkingSession = (projectType, draftData) => {
                     ? d.elevationM
                     : Number(d.elevationM) * 1000
                 )
-              : "8000",
+              : "",
           nnC:
             d.baseWindCoefficient != null
               ? String(d.baseWindCoefficient)
