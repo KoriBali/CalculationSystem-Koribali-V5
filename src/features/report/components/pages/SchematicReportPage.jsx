@@ -129,7 +129,7 @@ export function SchematicReportPage({
         </div>
 
         {/* Page Content: SVG Schematic */}
-        <div className="flex-1 w-full flex items-center justify-center overflow-hidden py-1">
+        <div className="flex-1 w-full flex items-center justify-center overflow-hidden py-1 schematic-svg-container">
           {isGenerating && !sanitizedSvgContent ? (
             <div className="flex flex-col items-center justify-center p-8 text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin text-[#3399cc] mb-2" />
@@ -137,7 +137,7 @@ export function SchematicReportPage({
             </div>
           ) : sanitizedSvgContent ? (
             <div
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex items-center justify-center schematic-svg-inner"
               dangerouslySetInnerHTML={{ __html: sanitizedSvgContent }}
             />
           ) : null}

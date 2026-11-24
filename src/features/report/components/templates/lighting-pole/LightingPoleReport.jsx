@@ -46,7 +46,7 @@ export default function LightingPoleReport({
   // 5. FASE 1 — measurement ONLY (user TIDAK LIHAT)
   if (!pages) {
     return (
-      <div ref={measureRef} className="measure-container">
+      <div ref={measureRef} className="measure-container old-lighting-pole-report">
         {blocks.map((b) => (
           <div key={b.id} data-id={b.id} className="measure-block">
             {b.node}
@@ -58,17 +58,19 @@ export default function LightingPoleReport({
 
   // 6. FASE 2 — FINAL RENDER (HANYA SEKALI)
   return (
-    <LightingPoleReportContent
-      cover={cover}
-      condition={condition}
-      results={results}
-      officialReport={officialReport}
-      pages={pages}
-      schematicSvg={schematicSvg}
-      isSchematicEdited={isSchematicEdited}
-      isSchematicGenerating={isSchematicGenerating}
-      onEditSchematic={onEditSchematic}
-      onRegenerateSchematic={onRegenerateSchematic}
-    />
+    <div className="old-lighting-pole-report">
+      <LightingPoleReportContent
+        cover={cover}
+        condition={condition}
+        results={results}
+        officialReport={officialReport}
+        pages={pages}
+        schematicSvg={schematicSvg}
+        isSchematicEdited={isSchematicEdited}
+        isSchematicGenerating={isSchematicGenerating}
+        onEditSchematic={onEditSchematic}
+        onRegenerateSchematic={onRegenerateSchematic}
+      />
+    </div>
   );
 }

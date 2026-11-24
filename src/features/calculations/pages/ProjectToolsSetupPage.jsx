@@ -8,7 +8,8 @@ import {
   CheckCircle,
   Circle,
   Calculator,
-  PenTool,
+  DraftingCompass,
+  Info,
   Layers,
   Sliders,
 } from "lucide-react";
@@ -59,7 +60,7 @@ const CardOption = ({ label, desc, icon: Icon, current, value, onChange }) => {
             {label}
           </p>
           <p
-            className={`text-[11px] md:text-xs mt-0.5 ${isActive ? "text-slate-500" : "text-slate-400"
+            className={`text-[12px] md:text-[13px] mt-0.5 ${isActive ? "text-slate-500" : "text-slate-500"
               }`}
           >
             {desc}
@@ -105,6 +106,10 @@ export default function ProjectToolsSetupPage() {
         const parsed = JSON.parse(saved);
         if (parsed.designType) return parsed.designType;
       }
+      const existing = JSON.parse(
+        sessionStorage.getItem(`${projectType}_condition`) || "{}"
+      );
+      if (existing.poleType) return existing.poleType;
     } catch {
       // ignore
     }
@@ -113,65 +118,83 @@ export default function ProjectToolsSetupPage() {
 
   const [showResetModal, setShowResetModal] = useState(false);
 
+  // Persists the setup + a base condition to sessionStorage.
+  const persistSetup = (
+    nextWorkType = workType,
+    nextDesignType = designType,
+    { resetPoleType = false } = {}
+  ) => {
+    sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        projectType,
+        workType: nextWorkType,
+        designType: nextDesignType,
+        updatedAt: new Date().toISOString(),
+      })
+    );
+    sessionStorage.setItem("projectType", projectType);
+    sessionStorage.setItem("projectMode", nextWorkType);
+    sessionStorage.setItem(
+      `${projectType}_workflow`,
+      JSON.stringify({ projectMode: nextWorkType, withReport: false })
+    );
+
+    let existingCondition = {};
+    try {
+      const existingRaw = sessionStorage.getItem(`${projectType}_condition`);
+      existingCondition = existingRaw ? JSON.parse(existingRaw) : {};
+    } catch {
+      // ignore
+    }
+
+    const poleType = resetPoleType
+      ? "standard"
+      : nextDesignType || existingCondition.poleType || "standard";
+
+    sessionStorage.setItem(
+      `${projectType}_condition`,
+      JSON.stringify({
+        designStandard:
+          existingCondition.designStandard === "new_jil"
+            ? "new_jil"
+            : "old_lighting_pole",
+        designWindSpeed: existingCondition.designWindSpeed || "60",
+        designAirDensity: existingCondition.designAirDensity || "1.23",
+        horizontalAcceleration:
+          existingCondition.horizontalAcceleration || "4.71",
+        responseRatio: existingCondition.responseRatio || "1.00",
+        poleType,
+        openingEnabled:
+          existingCondition.openingEnabled !== undefined
+            ? existingCondition.openingEnabled
+            : true,
+        baseplateEnabled: existingCondition.baseplateEnabled === true,
+        foundationEnabled:
+          existingCondition.foundationEnabled !== undefined
+            ? existingCondition.foundationEnabled
+            : false,
+      })
+    );
+    sessionStorage.setItem(
+      `${projectType}_calculation_config`,
+      JSON.stringify({
+        pole: true,
+        opening: true,
+        baseplate: existingCondition.baseplateEnabled === true,
+        foundation: false,
+      })
+    );
+  };
+
   // Auto-sync selection changes to sessionStorage
   useEffect(() => {
     try {
-      const payload = {
-        projectType,
-        workType,
-        designType,
-        updatedAt: new Date().toISOString(),
-      };
-      sessionStorage.setItem(storageKey, JSON.stringify(payload));
-      sessionStorage.setItem("projectType", projectType);
-      sessionStorage.setItem("projectMode", workType);
-      sessionStorage.setItem(
-        `${projectType}_workflow`,
-        JSON.stringify({ projectMode: workType, withReport: false })
-      );
-      const existingRaw = sessionStorage.getItem(`${projectType}_condition`);
-      let existingCondition = {};
-      try {
-        existingCondition = existingRaw ? JSON.parse(existingRaw) : {};
-      } catch (e) { }
-
-      sessionStorage.setItem(
-        `${projectType}_condition`,
-        JSON.stringify({
-          designStandard:
-            existingCondition.designStandard === "new_jil"
-              ? "new_jil"
-              : "old_lighting_pole",
-          designWindSpeed: existingCondition.designWindSpeed || "60",
-          designAirDensity: existingCondition.designAirDensity || "1.23",
-          horizontalAcceleration:
-            existingCondition.horizontalAcceleration || "4.71",
-          responseRatio: existingCondition.responseRatio || "1.00",
-          poleType: designType,
-          openingEnabled:
-            existingCondition.openingEnabled !== undefined
-              ? existingCondition.openingEnabled
-              : true,
-          baseplateEnabled:
-            existingCondition.baseplateEnabled === true,
-          foundationEnabled:
-            existingCondition.foundationEnabled !== undefined
-              ? existingCondition.foundationEnabled
-              : false,
-        })
-      );
-      sessionStorage.setItem(
-        `${projectType}_calculation_config`,
-        JSON.stringify({
-          pole: true,
-          opening: true,
-          baseplate: existingCondition.baseplateEnabled === true,
-          foundation: false,
-        })
-      );
+      persistSetup(workType, designType);
     } catch (err) {
       console.warn("Failed to persist setup in sessionStorage:", err);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectType, workType, designType, storageKey]);
 
   const handleReset = () => {
@@ -216,58 +239,17 @@ export default function ProjectToolsSetupPage() {
     keysToRemove.forEach((k) => {
       sessionStorage.removeItem(`${projectType}_${k}`);
     });
+    try {
+      persistSetup("calculation", "standard", { resetPoleType: true });
+    } catch (err) {
+      console.warn("Failed to reset setup in sessionStorage:", err);
+    }
     setShowResetModal(false);
   };
 
-  const handleNextInitial = () => {
+  const handleNext = () => {
     try {
-      sessionStorage.setItem("projectType", projectType);
-      sessionStorage.setItem("projectMode", workType);
-      sessionStorage.setItem(
-        `${projectType}_workflow`,
-        JSON.stringify({ projectMode: workType, withReport: false })
-      );
-      const existingRaw = sessionStorage.getItem(`${projectType}_condition`);
-      let existingCondition = {};
-      try {
-        existingCondition = existingRaw ? JSON.parse(existingRaw) : {};
-      } catch (e) { }
-
-      sessionStorage.setItem(
-        `${projectType}_condition`,
-        JSON.stringify({
-          designStandard:
-            existingCondition.designStandard === "new_jil"
-              ? "new_jil"
-              : "old_lighting_pole",
-          designWindSpeed: existingCondition.designWindSpeed || "60",
-          designAirDensity: existingCondition.designAirDensity || "1.23",
-          horizontalAcceleration:
-            existingCondition.horizontalAcceleration || "4.71",
-          responseRatio: existingCondition.responseRatio || "1.00",
-          poleType: designType,
-          openingEnabled:
-            existingCondition.openingEnabled !== undefined
-              ? existingCondition.openingEnabled
-              : true,
-          baseplateEnabled:
-            existingCondition.baseplateEnabled === true,
-          foundationEnabled:
-            existingCondition.foundationEnabled !== undefined
-              ? existingCondition.foundationEnabled
-              : false,
-        })
-      );
-      sessionStorage.setItem(
-        `${projectType}_calculation_config`,
-        JSON.stringify({
-          pole: true,
-          opening: true,
-          baseplate: existingCondition.baseplateEnabled === true,
-          foundation: false,
-        })
-      );
-
+      persistSetup(workType, designType);
       if (workType === "drawing") {
         navigate(`/project-tools/${projectType}/drawing/drawing-setup`);
       } else {
@@ -277,6 +259,14 @@ export default function ProjectToolsSetupPage() {
       console.error("Failed to save setup:", err);
     }
   };
+
+  const isDrawing = workType === "drawing";
+  const nextLabel = isDrawing ? "Next: Drawing General" : "Next: Initial Condition Input";
+  const nextHint = isDrawing
+    ? "Next, you will enter general drawing information and configure the drawing components."
+    : designType === "standard"
+      ? "Next, you will choose standard design conditions and select from standard catalog models."
+      : "Next, you will define custom dimensions, materials, and specific structural parameters.";
 
   const projectTitle = projectTypeLabel(projectType);
 
@@ -312,34 +302,49 @@ export default function ProjectToolsSetupPage() {
           />
 
           <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-            {/* ── Work Type Section ── */}
+            {/* ── Project Setup Section ── */}
             <div>
-              <SectionTitle>Work Type</SectionTitle>
+              <SectionTitle>Project Setup</SectionTitle>
+              <p className="-mt-2 mb-4 text-[12px] md:text-[13px] text-slate-500">
+                Choose the type of work to start for this {projectTitle.toLowerCase()}.
+              </p>
               <SectionCard>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p className="mb-3 md:mb-4 text-xs md:text-sm font-medium text-slate-700">
+                  What would you like to do?
+                </p>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   <CardOption
-                    label="Calculation"
-                    desc="Structural integrity, wind load, and stress analysis"
+                    label="Structural Calculation"
+                    desc="Run structural checks and generate a calculation report."
                     icon={Calculator}
                     value="calculation"
                     current={workType}
                     onChange={setWorkType}
                   />
                   <CardOption
-                    label="Drawing"
-                    desc="CAD technical drawings and structural drafting"
-                    icon={PenTool}
+                    label="Technical Drawing"
+                    desc="Configure pole details and generate a technical drawing."
+                    icon={DraftingCompass}
                     value="drawing"
                     current={workType}
                     onChange={setWorkType}
                   />
                 </div>
+
+                {/* Next-step hint */}
+                <p className="mt-3 md:mt-4 flex items-start gap-1.5 text-[12px] md:text-[13px] text-slate-500">
+                  <Info className="w-4 h-4 mt-[2.5px]" />
+                  <span>{nextHint}</span>
+                </p>
               </SectionCard>
             </div>
 
             {/* ── Design Type Section ── */}
             <div>
               <SectionTitle>Design Type</SectionTitle>
+              <p className="-mt-2 mb-4 text-[12px] md:text-[13px] text-slate-500">
+                Choose whether to use standard predefined specifications or customize your own.
+              </p>
               <SectionCard>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CardOption
@@ -378,10 +383,10 @@ export default function ProjectToolsSetupPage() {
 
               <button
                 type="button"
-                onClick={handleNextInitial}
+                onClick={handleNext}
                 className="flex justify-center items-center gap-2 px-5 py-2.5 md:px-6 rounded-lg hp:rounded-md font-medium bg-gradient-to-r from-[#0d3b66] to-[#3399cc] text-white text-xs md:text-sm hover:brightness-110 shadow-sm transition-all"
               >
-                Next: Initial
+                {nextLabel}
                 <ChevronRight className="w-4 lg:w-4.5 h-4 lg:h-4.5" />
               </button>
             </div>

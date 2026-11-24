@@ -337,16 +337,68 @@ export function StraightPoleStandardForm({
             </SectionTitle>
 
             <div className="border border-slate-200 rounded-xl hp:rounded-lg p-4 sm:p-6 bg-white shadow-sm">
-              <div className="w-full">
-                <AdaptiveGroundPositionInput
-                  value={straightPoleStandard.lowestHeight ?? "0"}
-                  groundPosition={straightPoleStandard.groundPosition ?? "onGL"}
-                  disabled={true}
-                  label="Lowest Height"
-                  title={condition?.baseplateEnabled !== false ? "Baseplate" : "Embedment"}
-                  required={true}
-                />
-              </div>
+              {condition?.baseplateEnabled !== false ? (
+                <div className="w-full">
+                  <AdaptiveGroundPositionInput
+                    value={straightPoleStandard.lowestHeight ?? "0"}
+                    groundPosition={straightPoleStandard.groundPosition ?? "onGL"}
+                    disabled={true}
+                    label="Lowest Height"
+                    title="Baseplate"
+                    required={true}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 bg-white w-full">
+                  {/* Header: Title Only */}
+                  <div className="flex items-center justify-between pb-1">
+                    <p className="text-xs md:text-sm font-semibold text-[#0d3b66]">
+                      Embedment
+                    </p>
+                  </div>
+
+                  <div className="flex hp:flex-col flex-row items-center justify-center h-56 hp:h-auto gap-4 sm:gap-6">
+                    {/* Left Side: Standard Form Input Field */}
+                    <div className="w-44 sm:w-52 hp:w-full">
+                      <label className="block text-xs md:text-sm mb-2 text-gray-700 font-medium">
+                        <span className="hidden hp:inline">
+                          Embedment Length (l)
+                        </span>
+                        <span className="hp:hidden inline">
+                          Embedment Length
+                        </span>
+                        <span className="text-red-500 ml-1 font-semibold">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          disabled
+                          placeholder="Input Length"
+                          value={straightPoleStandard.embedmentLength ?? ""}
+                          className="w-full pl-3 md:pl-4 pr-10 py-2 lg:py-2.5 rounded-lg hp:rounded-md text-xs md:text-sm outline-none transition-all border border-slate-200 bg-white text-slate-400 cursor-not-allowed"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs md:text-sm text-gray-400 pointer-events-none">
+                          mm
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Side: Diagram */}
+                    <div className="relative inline-flex items-center justify-center shrink-0">
+                      <img
+                        src="/images/embedment(l).svg"
+                        alt="embedment"
+                        className="hidden hp:block h-40 w-auto object-contain"
+                      />
+                      <img
+                        src="/images/embedment.svg"
+                        alt="embedment"
+                        className="block hp:hidden h-52 w-auto object-contain select-none shrink-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

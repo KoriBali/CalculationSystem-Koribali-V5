@@ -100,16 +100,23 @@ export function ConditionForm({
   const handleReset = () => {
     if (readOnly) return;
     const isStandard = condition?.poleType === "standard";
-    onUpdate({
+    const resetValues = {
       designStandard: "old_lighting_pole",
       designWindSpeed: "60",
       designAirDensity: "1.23",
       horizontalAcceleration: "4.71",
       responseRatio: "1.00",
-      openingEnabled: true,
-      baseplateEnabled: isStandard ? false : false,
-      foundationEnabled: false,
-    });
+    };
+
+    // Only reset additional components toggles for custom mode,
+    // where they are actually configured on this page.
+    if (!isStandard) {
+      resetValues.openingEnabled = true;
+      resetValues.baseplateEnabled = false;
+      resetValues.foundationEnabled = false;
+    }
+
+    onUpdate(resetValues);
   };
 
   const isNewJil = condition?.designStandard === "new_jil";

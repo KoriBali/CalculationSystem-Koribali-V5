@@ -251,6 +251,13 @@ export default function ProjectSelectPage() {
     navigate(`/projects/new/${projectId}`);
   };
 
+  const visibleProjectTypes = projectTypesList.filter(
+    (project) =>
+      project.id === "lighting-project" ||
+      project.id === "lighting" ||
+      !project.isInDevelopment
+  );
+
   return (
     <div className="min-h-full flex flex-col">
       <Helmet>
@@ -324,8 +331,14 @@ export default function ProjectSelectPage() {
         )}
 
         {/* ── Project type cards ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full max-w-[1400px] mx-auto">
-          {projectTypesList.map((project, index) => {
+        <div
+          className={`grid gap-4 sm:gap-6 w-full max-w-[1400px] mx-auto ${
+            visibleProjectTypes.length > 1
+              ? "grid-cols-1 xl:grid-cols-2"
+              : "grid-cols-1"
+          }`}
+        >
+          {visibleProjectTypes.map((project, index) => {
             const Icon = project.icon || Layers;
 
             return (

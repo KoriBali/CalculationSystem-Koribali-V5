@@ -10,6 +10,7 @@ export function usePoleConfigForm(projectType) {
       lowestHeight: "",
       groundPosition: "onGL",
       overdesignFactor: "1",
+      embedmentLength: "",
     },
   );
 

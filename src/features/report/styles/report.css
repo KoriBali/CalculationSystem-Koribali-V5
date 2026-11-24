@@ -421,3 +421,57 @@
     border: none;
   } */
 }
+
+/* ===== Old Lighting Pole JP Font Styling ===== */
+.old-lighting-pole-report .page-cover,
+.old-lighting-pole-report .page-cover *,
+.old-lighting-pole-report .page1-content,
+.old-lighting-pole-report .page1-content *,
+.old-lighting-pole-report .measure-container,
+.old-lighting-pole-report .measure-container *,
+.old-lighting-pole-report .measure-block,
+.old-lighting-pole-report .measure-block *,
+.old-lighting-pole-report .tables-pages,
+.old-lighting-pole-report .tables-pages *,
+.old-lighting-pole-report .page-header,
+.old-lighting-pole-report .latin,
+.old-lighting-pole-report .jp {
+  font-family: "IPAex Mincho", serif !important;
+}
+
+/* Schematic SVG Drawing: Restore original clean CAD / Gothic sans-serif style */
+.schematic-svg-container svg,
+.schematic-svg-container svg *,
+.schematic-svg-inner svg,
+.schematic-svg-inner svg *,
+.old-lighting-pole-report .schematic-svg-container svg,
+.old-lighting-pole-report .schematic-svg-container svg *,
+.old-lighting-pole-report .schematic-svg-inner svg,
+.old-lighting-pole-report .schematic-svg-inner svg * {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif !important;
+}
+
+@media print {
+  .old-lighting-pole-report .page-cover,
+  .old-lighting-pole-report .page-cover *,
+  .old-lighting-pole-report .page1-content,
+  .old-lighting-pole-report .page1-content *,
+  .old-lighting-pole-report .tables-pages,
+  .old-lighting-pole-report .tables-pages *,
+  .old-lighting-pole-report .page-header,
+  .old-lighting-pole-report .latin,
+  .old-lighting-pole-report .jp {
+    font-family: "IPAex Mincho", serif !important;
+  }
+
+  .schematic-svg-container svg,
+  .schematic-svg-container svg *,
+  .schematic-svg-inner svg,
+  .schematic-svg-inner svg *,
+  .old-lighting-pole-report .schematic-svg-container svg,
+  .old-lighting-pole-report .schematic-svg-container svg *,
+  .old-lighting-pole-report .schematic-svg-inner svg,
+  .old-lighting-pole-report .schematic-svg-inner svg * {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif !important;
+  }
+}

@@ -35,6 +35,7 @@ import { PoleTypeSelector } from "./standard/PoleType";
 import { TaperPoleStandardForm } from "./standard/TaperTypeForm";
 import { StraightPoleStandardForm } from "./standard/StraightTypeForm";
 import { StandardDirectObjectForm } from "./standard/StandardDirectObjectForm";
+import { StandardArmForm } from "./standard/StandardArmForm";
 import { ResultsTableView } from "../../tables/pole-result/ResultTableView";
 import STANDARD_POLE_DATA from "../../../data/specStandardPole.json";
 
@@ -124,6 +125,48 @@ export function getStandardPoleObjects(selectedPole) {
   }
 
   return objects;
+}
+
+// Helper to extract standard arms with armObjects from spec
+export function getStandardPoleArms(selectedPole, isOldJil = false) {
+  if (!selectedPole || !selectedPole.arms || selectedPole.arms.length === 0) {
+    return [];
+  }
+
+  return selectedPole.arms.map((arm, armIdx) => {
+    const armName = arm.name || `Arm ${armIdx + 1}`;
+    const defaultFixAngle = arm.fixAngle ?? (armIdx === 1 ? "180" : "0");
+
+    const armObjects = (arm.armObjects || []).map((ao, aoIdx) => ({
+      idAo: String(aoIdx + 1),
+      name: ao.name || "灯具",
+      type: isOldJil ? "omni" : ao.type || "directional",
+      frontArea: String(ao.frontArea ?? "0.1"),
+      sideArea: isOldJil ? null : String(ao.sideArea || ao.frontArea || "0.1"),
+      weight: String(ao.weight ?? "14"),
+      zHeight: String(ao.zHeight ?? "180"),
+      hDistance: String(ao.hDistance ?? ao.zHeight ?? "180"),
+      fixAngle: isOldJil ? null : String(ao.fixAngle ?? defaultFixAngle),
+      nnC: String(ao.nnC ?? "1"),
+      quantity: String(ao.quantity ?? "1"),
+    }));
+
+    return {
+      idArm: String(armIdx + 1),
+      name: armName,
+      material: arm.material || "STK400",
+      diameter: String(arm.diameter ?? "60.5"),
+      thickness: String(arm.thickness ?? "3.2"),
+      length: String(arm.length ?? "180"),
+      expLength: String(arm.expLength ?? "180"),
+      zHeight: String(arm.zHeight ?? "8000"),
+      hDistance: String(arm.hDistance ?? "90"),
+      fixAngle: String(defaultFixAngle),
+      nnC: String(arm.nnC ?? "0.7"),
+      quantity: String(arm.quantity ?? "1"),
+      armObjects,
+    };
+  });
 }
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
@@ -461,6 +504,39 @@ export default function PoleFormView() {
     }
   }, [isOldJil, doForm.directObjects, doForm.setDirectObjects]);
 
+  // Extract standard default arms from specStandardPole.json
+  const standardDefaultArms = useMemo(() => {
+    if (!isStandardTaper) return [];
+    const taper = poleStandardForm.taperPoleStandard;
+    if (!taper.poleType || !taper.height) return [];
+    const isEmbedment =
+      !condition.baseplateEnabled && taper.groundPosition === "underGL";
+    const rawH = Number(taper.height);
+    const mHeight = rawH > 100 ? rawH / 1000 : rawH;
+    const heightKey = isEmbedment
+      ? (mHeight + 0.3).toFixed(1)
+      : String(Math.round(mHeight * 10) / 10);
+    const dataTaper = STANDARD_POLE_DATA?.tapered || STANDARD_POLE_DATA?.taper;
+    const group = dataTaper?.[taper.poleType]?.[taper.groundPosition] || {};
+    const isTypeWith100 = taper.poleType !== "IS" && taper.poleType !== "IA";
+    const nominalKey = isTypeWith100
+      ? String(Math.round((Number(heightKey) - 0.1) * 10) / 10)
+      : String(Math.round((Number(heightKey) + 0.1) * 10) / 10);
+    const selectedPole =
+      group[heightKey] ||
+      group[nominalKey] ||
+      group[String(rawH)] ||
+      group[String(mHeight)];
+    return getStandardPoleArms(selectedPole, isOldJil);
+  }, [
+    isStandardTaper,
+    condition.baseplateEnabled,
+    poleStandardForm.taperPoleStandard.poleType,
+    poleStandardForm.taperPoleStandard.groundPosition,
+    poleStandardForm.taperPoleStandard.height,
+    isOldJil,
+  ]);
+
   // Sync default direct & arm objects from specStandardPole.json when standard taper pole selection changes
   useEffect(() => {
     if (!isStandardTaper || !standardTaperPoleKey) return;
@@ -489,6 +565,82 @@ export default function PoleFormView() {
     projectType,
     doForm,
   ]);
+
+  // Sync default standard arms from specStandardPole.json when standard taper pole selection changes
+  const { setArms: setArmFormArms, arms: armFormArms } = armForm;
+  useEffect(() => {
+    if (!isStandardTaper || !standardTaperPoleKey) return;
+    if (standardDefaultArms.length === 0) return;
+
+    const savedKey = sessionStorage.getItem(
+      `${projectType}_standardTaperPoleKey_arms`,
+    );
+
+    if (
+      savedKey !== standardTaperPoleKey ||
+      armFormArms.length !== standardDefaultArms.length ||
+      armFormArms.some((a) => !a.idArm || !a.armObjects)
+    ) {
+      if (typeof setArmFormArms === "function") {
+        setArmFormArms(standardDefaultArms);
+      }
+      sessionStorage.setItem(
+        `${projectType}_standardTaperPoleKey_arms`,
+        standardTaperPoleKey,
+      );
+    }
+  }, [
+    isStandardTaper,
+    standardTaperPoleKey,
+    standardDefaultArms,
+    projectType,
+    armFormArms.length,
+    setArmFormArms,
+  ]);
+
+  // Handlers for updating and resetting standard arms
+  const handleUpdateStandardArm = useCallback(
+    (idArm, updates) => {
+      armForm.updateArm(idArm, updates);
+    },
+    [armForm],
+  );
+
+  const handleUpdateStandardArmObject = useCallback(
+    (idArm, idAo, updates) => {
+      if (typeof setArmFormArms === "function") {
+        setArmFormArms((prev) =>
+          (prev || []).map((arm) => {
+            if (arm.idArm !== String(idArm)) return arm;
+            const updatedObjects = (arm.armObjects || []).map((ao) =>
+              ao.idAo === String(idAo) ? { ...ao, ...updates } : ao,
+            );
+            return { ...arm, armObjects: updatedObjects };
+          }),
+        );
+      }
+    },
+    [setArmFormArms],
+  );
+
+  const handleResetStandardArm = useCallback(
+    (idArm) => {
+      const defaultArm = standardDefaultArms.find(
+        (a) => a.idArm === String(idArm),
+      );
+      if (!defaultArm) return;
+      if (typeof setArmFormArms === "function") {
+        setArmFormArms((prev) =>
+          (prev || []).map((arm) =>
+            arm.idArm === String(idArm)
+              ? JSON.parse(JSON.stringify(defaultArm))
+              : arm,
+          ),
+        );
+      }
+    },
+    [standardDefaultArms, setArmFormArms],
+  );
 
   // Reset a standard direct or arm object to its default values from specStandardPole.json
   const handleResetStandardDirectObject = (idDo) => {
@@ -701,6 +853,7 @@ export default function PoleFormView() {
                         poleConfig={poleConfigForm.poleConfig}
                         onUpdate={poleConfigForm.updatePoleConfig}
                         errors={poleConfigForm.poleConfigErrors}
+                        condition={condition}
                       />
                     </div>
 
@@ -1020,7 +1173,9 @@ export default function PoleFormView() {
                   >
                     {isCustomMode
                       ? "Direct Object Specifications"
-                      : "Object Specifications"}
+                      : isStandardTaper && standardDefaultArms.length > 0
+                        ? "Arm & Object Specifications"
+                        : "Object Specifications"}
                   </h2>
 
                   {/* Expand / collapse icon */}
@@ -1076,6 +1231,24 @@ export default function PoleFormView() {
                         setConfirmDeleteDo={doForm.setConfirmDeleteDo}
                         resetCurrentDo={doForm.resetDo}
                         handleAddDo={doForm.addDo}
+                        readOnly={isReadOnly}
+                        isOldJil={isOldJil}
+                      />
+                    ) : standardDefaultArms.length > 0 ? (
+                      <StandardArmForm
+                        arms={
+                          armForm.arms &&
+                          armForm.arms.length === standardDefaultArms.length
+                            ? armForm.arms
+                            : standardDefaultArms
+                        }
+                        defaultArms={standardDefaultArms}
+                        onUpdateArm={handleUpdateStandardArm}
+                        onUpdateArmObject={handleUpdateStandardArmObject}
+                        onResetArm={handleResetStandardArm}
+                        errors={armForm.armsErrors}
+                        aoErrors={armForm.aoErrors}
+                        taperPoleStandard={poleStandardForm.taperPoleStandard}
                         readOnly={isReadOnly}
                         isOldJil={isOldJil}
                       />

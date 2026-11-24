@@ -21,6 +21,7 @@ const PROJECT_TOOLS_TYPES = [
     description:
       "Calculate structural integrity and wind load for street and area lighting pole installations.",
     isInDevelopment: false,
+    hidden: false,
   },
   {
     id: "signboard-project",
@@ -29,6 +30,7 @@ const PROJECT_TOOLS_TYPES = [
     description:
       "Analyze structural requirements for standalone and wall-mounted advertisement signboards.",
     isInDevelopment: true,
+    hidden: true,
   },
   {
     id: "disaster-prevention-project",
@@ -37,6 +39,7 @@ const PROJECT_TOOLS_TYPES = [
     description:
       "Evaluate safety factors and load capacities for emergency alert and disaster warning systems.",
     isInDevelopment: true,
+    hidden: true,
   },
   {
     id: "multi-purpose-project",
@@ -45,12 +48,17 @@ const PROJECT_TOOLS_TYPES = [
     description:
       "Comprehensive analysis for structures supporting various multi-purpose load attachments.",
     isInDevelopment: true,
+    hidden: true,
   },
 ];
 
 export default function ProjectToolsPage() {
   const navigate = useNavigate();
   const [inDevModal, setInDevModal] = useState(null);
+
+  const visibleProjects = PROJECT_TOOLS_TYPES.filter(
+    (project) => !project.hidden
+  );
 
   const handleSelectProject = (project) => {
     if (project.isInDevelopment) {
@@ -78,8 +86,14 @@ export default function ProjectToolsPage() {
         </div>
 
         {/* Project type cards - clean, professional horizontal layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 w-full max-w-[1400px] mx-auto">
-          {PROJECT_TOOLS_TYPES.map((project) => {
+        <div
+          className={`grid gap-4 sm:gap-6 w-full max-w-[1400px] mx-auto ${
+            visibleProjects.length > 1
+              ? "grid-cols-1 xl:grid-cols-2"
+              : "grid-cols-1"
+          }`}
+        >
+          {visibleProjects.map((project) => {
             const Icon = project.icon;
 
             return (

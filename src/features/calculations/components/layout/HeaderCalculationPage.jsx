@@ -809,7 +809,7 @@ export function HeaderCalculationPage() {
                       ? "Saving Draft..."
                       : "Save Draft"
                   }
-                  className="flex items-center justify-center w-[38px] h-[38px] shrink-0 rounded-lg hover:bg-white/10 active:bg-white/15 transition text-amber-300 disabled:opacity-60"
+                  className="flex items-center justify-center w-[38px] h-[38px] shrink-0 rounded-lg hover:bg-white/10 active:bg-white/15 transition text-amber-300 disabled:opacity-60 cursor-pointer"
                 >
                   {isReadOnly ? (
                     <Lock className="w-4 h-4 text-amber-300" />
@@ -994,8 +994,8 @@ export function HeaderCalculationPage() {
 
                 {/* SAVE DRAFT + MINIMIZE / PROJECT TITLE */}
                 <div className="flex-1 flex items-center justify-end gap-2 relative">
-                  {!isProjectTools && (
-                    isReadOnly ? (
+                  {!isProjectTools &&
+                    (isReadOnly ? (
                       <button
                         type="button"
                         data-readonly-trigger="true"
@@ -1016,7 +1016,7 @@ export function HeaderCalculationPage() {
                         type="button"
                         disabled={isSavingDraft}
                         onClick={handleQuickSave}
-                        className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 shrink-0 whitespace-nowrap border rounded-lg hp:rounded-md text-xs sm:text-sm font-medium transition bg-white/10 hover:bg-white/20 active:bg-white/25 border-white/20 text-white disabled:opacity-60"
+                        className="flex items-center justify-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 shrink-0 whitespace-nowrap border rounded-lg hp:rounded-md text-xs sm:text-sm font-medium transition bg-white/10 hover:bg-white/20 active:bg-white/25 border-white/20 text-white disabled:opacity-60 cursor-pointer"
                       >
                         {isSavingDraft ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
@@ -1030,8 +1030,7 @@ export function HeaderCalculationPage() {
                           {isSavingDraft ? "..." : "Save"}
                         </span>
                       </button>
-                    )
-                  )}
+                    ))}
 
                   {/* Minimize — only offered once the header is stuck over the
                 content (appears together with the scroll-to-top button).

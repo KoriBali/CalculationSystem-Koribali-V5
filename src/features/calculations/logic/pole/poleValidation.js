@@ -80,6 +80,62 @@ const resolveData = ({
       ? JSON.parse(JSON.stringify(selectedPole.arms))
       : [];
 
+    // Merge user-edited arms specification when in standard mode with arms
+    if (arms && arms.length > 0 && selectedPole.arms?.length > 0) {
+      resolvedArms = resolvedArms.map((defArm, idx) => {
+        const userArm =
+          arms[idx] ||
+          arms.find(
+            (a) => a.idArm === String(idx + 1) || a.name === defArm.name,
+          );
+        if (!userArm) return defArm;
+
+        const mergedArm = {
+          ...defArm,
+          idArm: userArm.idArm || String(idx + 1),
+          name: userArm.name ?? defArm.name,
+          material: userArm.material ?? defArm.material,
+          diameter: userArm.diameter ?? defArm.diameter,
+          thickness: userArm.thickness ?? defArm.thickness,
+          length: userArm.length ?? defArm.length,
+          expLength: userArm.expLength ?? defArm.expLength,
+          zHeight: userArm.zHeight ?? defArm.zHeight,
+          hDistance: userArm.hDistance ?? defArm.hDistance,
+          fixAngle: userArm.fixAngle ?? defArm.fixAngle,
+          nnC: userArm.nnC ?? defArm.nnC,
+          quantity: userArm.quantity ?? defArm.quantity,
+        };
+
+        if (Array.isArray(userArm.armObjects) && userArm.armObjects.length > 0) {
+          mergedArm.armObjects = (defArm.armObjects || []).map(
+            (defAo, aoIdx) => {
+              const userAo =
+                userArm.armObjects[aoIdx] ||
+                userArm.armObjects.find((o) => o.idAo === String(aoIdx + 1));
+              if (!userAo) return defAo;
+              return {
+                ...defAo,
+                idAo: userAo.idAo || String(aoIdx + 1),
+                name: userAo.name ?? defAo.name,
+                type: userAo.type ?? defAo.type,
+                frontArea: userAo.frontArea ?? defAo.frontArea,
+                sideArea: userAo.sideArea ?? defAo.sideArea,
+                weight: userAo.weight ?? defAo.weight,
+                zHeight:
+                  userAo.zHeight ?? userAo.hDistance ?? defAo.zHeight,
+                hDistance:
+                  userAo.hDistance ?? userAo.zHeight ?? defAo.hDistance,
+                fixAngle: userAo.fixAngle ?? defAo.fixAngle,
+                nnC: userAo.nnC ?? defAo.nnC,
+                quantity: userAo.quantity ?? defAo.quantity,
+              };
+            },
+          );
+        }
+        return mergedArm;
+      });
+    }
+
     if (directObjects && directObjects.length > 0) {
       directObjects.forEach((obj) => {
         if (obj.sourceType === "direct") {
@@ -196,8 +252,12 @@ export async function validatePoleForm({
 
   // ── 1. Structural Design (custom only) ──
   if (isCustom) {
+    const schema =
+      typeof PoleConfigSchema === "function"
+        ? PoleConfigSchema(condition)
+        : PoleConfigSchema;
     const { isValid, errors } = await validateWithYup(
-      PoleConfigSchema,
+      schema,
       poleConfig,
     );
 
@@ -434,6 +494,7 @@ export async function validatePoleForm({
             if (!aoValid) {
               hasArmError = true;
               allAoErrors[ao.idAo] = aoErrors;
+              allAoErrors[`${arm.idArm}_${ao.idAo}`] = aoErrors;
             }
           }),
         );

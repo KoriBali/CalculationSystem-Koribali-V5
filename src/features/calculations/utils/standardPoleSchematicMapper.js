@@ -29,15 +29,74 @@ export function isSchematicSupportedPole(poleType) {
 }
 
 /**
+ * Maps frontend overhead wire list to the format expected by the Drawing Engine (overHeadWires).
+ * @param {Array} rawList
+ * @returns {Array}
+ */
+export function mapSchematicOverheadWires(rawList) {
+  if (!Array.isArray(rawList) || rawList.length === 0) return [];
+
+  return rawList
+    .filter(
+      (w) =>
+        w &&
+        (w.name ||
+          w.zHeight != null ||
+          w.elevationM != null ||
+          w.diameter != null ||
+          w.weight != null),
+    )
+    .map((w, idx) => {
+      // In FE, zHeight is entered in mm (e.g. 7500 or 8000). If elevationM is used, convert to mm if < 100.
+      const rawZ = Number(
+        w.zHeight ??
+          (w.elevationM ? (w.elevationM < 100 ? w.elevationM * 1000 : w.elevationM) : 0),
+      );
+      const height = isNaN(rawZ) ? 0 : rawZ;
+
+      const rawDia = Number(w.diameter ?? w.diameterMm ?? 0);
+      const diameter = isNaN(rawDia) ? 0 : rawDia;
+
+      const rawSpan = Number(w.span ?? w.spanLengthM ?? 0);
+      const span = isNaN(rawSpan) ? 0 : rawSpan;
+
+      const rawWeight = Number(w.weight ?? w.massPerLengthKgM ?? 0);
+      const weight = isNaN(rawWeight) ? 0 : rawWeight;
+
+      const rawFixAngle = Number(w.fixAngle ?? w.fixedAngleDeg ?? 0);
+      const fixAngle = isNaN(rawFixAngle) ? 0 : rawFixAngle;
+
+      const rawVertAngle = Number(w.verticalAngle ?? w.verticalAngleDeg ?? 0);
+      const verticalAngle = isNaN(rawVertAngle) ? 0 : rawVertAngle;
+
+      return {
+        name: String(w.name || `Overhead Wire ${idx + 1}`).trim(),
+        height,
+        elevation: height,
+        diameter,
+        span,
+        weight,
+        fixAngle,
+        verticalAngle,
+      };
+    });
+}
+
+/**
  * Resolves standard straight pole (stepped pole) from specStandardPole.json and user inputs
  * and builds the exact payload structure required by Amir's Drawing Engine.
  *
  * @param {object} params
  * @param {object} params.straightPoleStandard - { combination, upperLength, upperThickness, lowerLength, lowerThickness, groundPosition, lowestHeight }
  * @param {object} [params.condition] - { baseplateEnabled, ... }
+ * @param {Array} [params.overheadWires] - array of overhead wire objects
  * @returns {object|null} Returns { standardId, poleType, payload } or null if not supported/available.
  */
-export function getStraightPoleSchematicParameters({ straightPoleStandard, condition = {} }) {
+export function getStraightPoleSchematicParameters({
+  straightPoleStandard,
+  condition = {},
+  overheadWires = [],
+}) {
   if (!straightPoleStandard || !straightPoleStandard.combination) return null;
 
   // As confirmed: schematic drawing for embedment straight pole is not yet ready in Amir's system.
@@ -94,7 +153,13 @@ export function getStraightPoleSchematicParameters({ straightPoleStandard, condi
       ? 0
       : Number(straightPoleStandard.lowestHeight || 0);
 
-  const standardId = `ST-${combination}-${upperLength}-${lowerLength}-${groundPos}${lowestStep !== 0 ? `-${lowestStep}` : ""}`;
+  const overHeadWires = mapSchematicOverheadWires(overheadWires);
+  const ohwSuffix =
+    overHeadWires.length > 0
+      ? `-ohw${overHeadWires.map((w) => `${w.height}_${w.fixAngle}`).join("_")}`
+      : "";
+
+  const standardId = `ST-${combination}-${upperLength}-${lowerLength}-${groundPos}${lowestStep !== 0 ? `-${lowestStep}` : ""}${ohwSuffix}`;
 
   return {
     standardId,
@@ -103,7 +168,7 @@ export function getStraightPoleSchematicParameters({ straightPoleStandard, condi
       poles,
       arms: [],
       directObjects: [],
-      overHeadWires: [],
+      overHeadWires,
       lowestStep,
     },
   };
@@ -119,6 +184,7 @@ export function getStraightPoleSchematicParameters({ straightPoleStandard, condi
  * @param {object} [params.straightPoleStandard] - { combination, upperLength, upperThickness, lowerLength, lowerThickness, groundPosition, lowestHeight }
  * @param {object} [params.poleTypeStandard] - { type: "tapered" | "straight" }
  * @param {object} [params.condition] - { baseplateEnabled, ... }
+ * @param {Array} [params.overheadWires] - array of overhead wire objects
  * @returns {object|null} Returns { standardId, poleType, payload } or null if not supported/available.
  */
 export function getStandardPoleSchematicParameters({
@@ -126,13 +192,18 @@ export function getStandardPoleSchematicParameters({
   straightPoleStandard,
   poleTypeStandard,
   condition = {},
+  overheadWires = [],
 }) {
   const isStraight =
     poleTypeStandard?.type === "straight" ||
     (!taperPoleStandard?.poleType && Boolean(straightPoleStandard?.combination));
 
   if (isStraight) {
-    return getStraightPoleSchematicParameters({ straightPoleStandard, condition });
+    return getStraightPoleSchematicParameters({
+      straightPoleStandard,
+      condition,
+      overheadWires,
+    });
   }
 
   if (!taperPoleStandard || !taperPoleStandard.poleType) return null;
@@ -275,14 +346,23 @@ export function getStandardPoleSchematicParameters({
     verticalAngle: 0,
   }));
 
+  const overHeadWires = mapSchematicOverheadWires(overheadWires);
+  const ohwSuffix =
+    overHeadWires.length > 0
+      ? `-ohw${overHeadWires.map((w) => `${w.height}_${w.fixAngle}`).join("_")}`
+      : "";
+
+  const baseStandardId = selectedPole.standardId || `${type}-${heightKey}`;
+  const standardId = `${baseStandardId}${ohwSuffix}`;
+
   return {
-    standardId: selectedPole.standardId || `${type}-${heightKey}`,
+    standardId,
     poleType: type,
     payload: {
       poles,
       arms,
       directObjects,
-      overHeadWires: [],
+      overHeadWires,
     },
   };
 }

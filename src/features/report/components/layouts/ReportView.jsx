@@ -43,6 +43,7 @@ import {
   resolveRequestIdForCase,
 } from "../../../calculations/utils/coreLogic";
 import { CoverFormModal } from "../../../calculations/components/modals/CoverFormModal";
+import { SaveDraftProjectModal } from "../../../calculations/components/modals/SaveDraftProjectModal";
 import { ToastModal } from "../../../calculations/components/modals/ToastModal";
 import { useReadOnly } from "../../../calculations/contexts/ReadOnlyContext";
 import { getUser } from "../../../../utils/auth";
@@ -802,6 +803,7 @@ export function ReportView() {
   const { isReadOnly } = useReadOnly();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
+  const [showSaveDraftModal, setShowSaveDraftModal] = useState(false);
   const [hasReport, setHasReport] = useState(true);
   const [toast, setToast] = useState(null);
 
@@ -945,14 +947,43 @@ export function ReportView() {
     }
   }, [reportData, projectType]);
 
+  const overheadWires = useMemo(() => {
+    if (
+      Array.isArray(reportData?.calculatedPoles?.overheadWires) &&
+      reportData.calculatedPoles.overheadWires.length > 0
+    ) {
+      return reportData.calculatedPoles.overheadWires;
+    }
+    if (
+      Array.isArray(reportData?.overheadWires) &&
+      reportData.overheadWires.length > 0
+    ) {
+      return reportData.overheadWires;
+    }
+    try {
+      const saved = sessionStorage.getItem(`${projectType}_overheadWires`);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return [];
+  }, [reportData, projectType]);
+
   const schematicParams = useMemo(() => {
     return getStandardPoleSchematicParameters({
       taperPoleStandard,
       straightPoleStandard,
       poleTypeStandard,
       condition,
+      overheadWires,
     });
-  }, [taperPoleStandard, straightPoleStandard, poleTypeStandard, condition]);
+  }, [
+    taperPoleStandard,
+    straightPoleStandard,
+    poleTypeStandard,
+    condition,
+    overheadWires,
+  ]);
 
   const iframeRef = useRef(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -1253,8 +1284,8 @@ export function ReportView() {
 
                   <button
                     type="button"
-                    onClick={() => {}}
-                    title="Save Draft (Coming soon)"
+                    onClick={() => setShowSaveDraftModal(true)}
+                    title="Save Draft"
                     className="h-9 px-3.5 sm:px-5 text-xs sm:text-sm bg-gradient-to-r from-[#0d3b66] to-[#1a5a92] text-white rounded-lg hover:brightness-105 transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap cursor-pointer font-medium"
                   >
                     <Save className="w-4 h-4 shrink-0" />
@@ -1369,6 +1400,24 @@ export function ReportView() {
         draftId={draftId}
         onConfirm={handleSaveCover}
         isEditMode={true}
+      />
+
+      <SaveDraftProjectModal
+        open={showSaveDraftModal}
+        onClose={() => setShowSaveDraftModal(false)}
+        onNext={({ mode, projectNo }) => {
+          if (draftId) {
+            try {
+              saveWorkingSessionToDraft(projectType, draftId);
+            } catch (e) {
+              console.warn("Save draft error:", e);
+            }
+          }
+          setToast({
+            message: `Draft successfully saved! (${mode === "existing" ? `Project ${projectNo}` : "New Project"})`,
+            type: "success",
+          });
+        }}
       />
 
       <ToastModal toast={toast} onClose={() => setToast(null)} />

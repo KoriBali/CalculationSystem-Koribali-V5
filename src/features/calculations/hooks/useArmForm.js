@@ -202,6 +202,7 @@ export function useArmForm(projectType) {
     isBackDisabledArm,
 
     // Setters
+    setArms,
     setActiveTabArm,
     setArmsErrors,
     setAoErrors,
